@@ -12,6 +12,12 @@
         android:text="@string/dummyText"
         android:textSize="24sp" />
 
+    <Button
+        android:id="@+id/activityStationIdButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Button" />
+
     <TextView
         android:id="@+id/textView1"
         android:layout_width="wrap_content"

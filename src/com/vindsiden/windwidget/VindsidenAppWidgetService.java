@@ -9,6 +9,7 @@ import java.util.List;
 import org.xmlpull.v1.XmlPullParserException;
 
 import com.vindsiden.windwidget.config.WindWidgetConfig;
+import com.vindsiden.windwidget.config.WindWidgetConfigManager;
 import com.vindsiden.windwidget.model.Measurement;
 import com.vindsiden.windwidget.model.PresentationHelper;
 
@@ -86,7 +87,7 @@ public class VindsidenAppWidgetService extends IntentService {
 		updateMeasurementIntent.setData(Uri.parse("content://" + PACKAGE_NAME + NEXT_SCHEDULE_URI_POSTFIX)); 
 		PendingIntent updateMeasurementPendingIntent = PendingIntent.getService(this, 0, updateMeasurementIntent,
 				PendingIntent.FLAG_UPDATE_CURRENT);
-
+		
 		// In effect, the first day update times will be dependent on at what time the user started the app,
 		// it could for examle first update at 0903, then 0918, 0933 etc ...
 		// yet, the next day, the first measurement should be made at the getStartTime() (0900)
@@ -114,8 +115,9 @@ public class VindsidenAppWidgetService extends IntentService {
 			nextUpdate = startTimeToday.toMillis(false) + oneDayInMils;
 		}			
 		
-		AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);	
-		alarmManager.set(AlarmManager.RTC, nextUpdate, updateMeasurementPendingIntent);
+		AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+		// TODO: check: RTC could specifiy "only update a non-sleeping device?"
+		alarmManager.set(AlarmManager.RTC, nextUpdate, updateMeasurementPendingIntent);		
 	}
 
 	/**
@@ -153,8 +155,8 @@ public class VindsidenAppWidgetService extends IntentService {
 			throw new RuntimeException ( getResources().getString(R.string.xml_error));
 		}		
 		finally { // todo: any necessary cleanup. 
-		} 
-
+		} 		
+		
 		// assume the most recent data is read first from the XML - it probably is, but there's possibility for error here.
 		Measurement mostRecentMeasurement = measurements.get(0);
 		// add a measure of tolerance (for the case where XML exists, but has readable measurements) 

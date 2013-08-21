@@ -3,8 +3,13 @@ package com.vindsiden.windwidget;
 import static android.appwidget.AppWidgetManager.ACTION_APPWIDGET_DELETED;
 import static android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID;
 import static android.appwidget.AppWidgetManager.INVALID_APPWIDGET_ID;
+
+import com.vindsiden.windwidget.config.WindWidgetConfig;
+import com.vindsiden.windwidget.config.WindWidgetConfigManager;
+
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 
@@ -28,9 +33,18 @@ public class VindsidenAppWidgetProvider extends AppWidgetProvider {
 			}
 		}
 
+		//assume my WindWidgetConfigManager class is not garbage collected,
+		//and use it to save some config data (I would normally have put that data in a AppWidget implementation, 
+		//but that seems to go against the grain the way Android thinks? not willing to save state in buttons/view/layout components :p 
+		// Using the class and static methos to pass config params is rather dirty, but that's the way it is
+		// 'til refactoring comes ...
+		for (int id : appWidgetIds) {
+			WindWidgetConfigManager.addConfigAt(id, WindWidgetConfig.createADefaultConfig());
+		}
+		
+		
 		Intent intent = new Intent(context, VindsidenAppWidgetService.class);
 		intent.putExtra(EXTRA_APPWIDGET_ID, appWidgetId);
-
 		context.startService(intent);
 	}
 
@@ -55,4 +69,22 @@ public class VindsidenAppWidgetProvider extends AppWidgetProvider {
 			super.onReceive(context, intent);
 		}
 	}
+	
+	/**
+	 *
+	 */	
+	@Override
+	public void onDeleted(Context context, int[] appWidgetIds) {
+		// TODO Auto-generated method stub
+		super.onDeleted(context, appWidgetIds);
+		// code here for deleting config files						
+		int N = appWidgetIds.length;
+		for (int i = 0; i < N; i++) {
+			if (i != INVALID_APPWIDGET_ID) {
+				WindWidgetConfigManager.removeConfigAt(i);
+			}
+		}
+	}
+			
+	
 }

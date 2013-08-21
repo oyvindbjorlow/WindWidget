@@ -3,11 +3,17 @@ package com.vindsiden.windwidget;
 import static android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID;
 import static android.appwidget.AppWidgetManager.INVALID_APPWIDGET_ID;
 
+import com.vindsiden.windwidget.config.WindWidgetConfig;
+import com.vindsiden.windwidget.config.WindWidgetConfigManager;
+
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.format.Time;
+import android.view.View;
+import android.view.View.OnClickListener;
 import android.widget.AdapterView.OnItemSelectedListener;
+import android.widget.Button;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.TimePicker;
@@ -17,6 +23,9 @@ import android.widget.TimePicker.OnTimeChangedListener;
  * Receives requests from App Widgets
  */
 public class VindsidenActivity extends Activity {
+	
+	private int appWidgetId;
+	
 	/**
 	 * {@inheritDoc}
 	 */
@@ -30,8 +39,30 @@ public class VindsidenActivity extends Activity {
 		
 		// Øyvind: added, should be useful if we get to introduce several config objects
 		// TODO: change config access code here to access config object with ID matching
-		int appWidgetId = intent.getIntExtra(EXTRA_APPWIDGET_ID, INVALID_APPWIDGET_ID);
+		// change: int appWidgetId set as an instance variable to be reachable from the listener(possibly messy idea)?  
+		appWidgetId = intent.getIntExtra(EXTRA_APPWIDGET_ID, INVALID_APPWIDGET_ID);
 
+		/*
+		//Testing out config data
+		WindWidgetConfig c = WindWidgetConfigManager.getConfigFor(appWidgetId);
+		Button b = (Button) findViewById(R.id.activityStationIdButton);
+		b.setText (""+c.getStationID());
+		
+		b.setOnClickListener(new OnClickListener() {			
+			@Override
+			public void onClick(View v) {
+				String s =  ((Button) v).getText().toString();
+				int nyVerdi = Integer.valueOf(s)+1;
+				
+				WindWidgetConfig c = WindWidgetConfigManager.getConfigFor(VindsidenActivity.this.appWidgetId);
+				c.setStationID(nyVerdi);
+				((Button) v).setText(""+nyVerdi);
+				
+			}
+		}); 
+		*/		
+
+		
 		String message = customMessage == null ? "WindWidget oppsett" : customMessage;
 		TextView tv = (TextView) findViewById(R.id.windwidget_view);
 		tv.setText(message);
@@ -41,7 +72,6 @@ public class VindsidenActivity extends Activity {
 		int oldFreq = VindsidenAppWidgetService.config.getFrequenceIntervalInMinutes();
 		// TODO some robustness here would be nice I suppose - freq values are defined both in XML and hardcoded here as of
 		// now.
-		// TODO OBI-WAN error likely here!
 		if (oldFreq == 5) {
 			defaultChoice = 0;
 		}

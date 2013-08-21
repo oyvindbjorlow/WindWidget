@@ -8,7 +8,7 @@
         android:minSdkVersion="3"
         android:targetSdkVersion="18"
          />
-	
+		
 	<uses-permission android:name="android.permission.INTERNET"></uses-permission>
     
     <application
