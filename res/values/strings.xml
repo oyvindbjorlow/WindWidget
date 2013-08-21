@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">WindWidget</string>
+    <string name="xml_error">XML error. off. off.</string>
+    <string name="connection_error">Connection error. off. off.</string>
+    <string name="dummyText">Initializing pls wait</string>
+    
+    <string-array name="frequence_array">
+        <item>5</item>
+        <item>15</item>
+        <item>30</item>
+        <item>60</item>
+    </string-array>
+    
+</resources>
