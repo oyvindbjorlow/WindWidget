@@ -8,9 +8,11 @@ import com.vindsiden.windwidget.config.WindWidgetConfigManager;
 import com.vindsiden.windwidget.model.BDayWidgetModel;
 
 import android.app.Activity;
+import android.appwidget.AppWidgetProvider;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.format.Time;
+import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.AdapterView.OnItemSelectedListener;
@@ -25,7 +27,7 @@ import android.widget.TimePicker.OnTimeChangedListener;
  */
 public class VindsidenActivity extends Activity {
 	
-	
+	private static final String tag = AppWidgetProvider.class.getName(); // getSimpleName());	
 	
 	/**
 	 * {@inheritDoc}
@@ -43,34 +45,24 @@ public class VindsidenActivity extends Activity {
 		// change: int appWidgetId set as an instance variable to be reachable from the listener(possibly messy idea)?  
 		final int appWidgetId = intent.getIntExtra(EXTRA_APPWIDGET_ID, INVALID_APPWIDGET_ID);
 
-		//"this" as context could be wrong? should it be something different?
-		/*
-		BDayWidgetModel bwm = BDayWidgetModel.retrieveModel(this, appWidgetId);
-		Button b = (Button) findViewById(R.id.activityStationIdButton);
-		b.setText (bwm.getName());
-		*/
-		
-		
-		
-		/*
-		//Testing out config data
-		WindWidgetConfig c = WindWidgetConfigManager.getConfigFor(appWidgetId);
-		Button b = (Button) findViewById(R.id.activityStationIdButton);
-		b.setText (""+c.getStationID());
-		
-		b.setOnClickListener(new OnClickListener() {			
+		//Øyvind: test stateful widgets, see if we can recreate the widget from old state:
+	   BDayWidgetModel bwm = BDayWidgetModel.retrieveModel(this, appWidgetId);
+     if (bwm == null)
+     {
+        Log.d(tag,"No widget model found for:" + appWidgetId);
+        return; // NB! RETURN STATEMENT TODO CHECK
+     }
+     
+     Button b = (Button ) findViewById(R.id.activityStationIdButton);
+     b.setText(bwm.getName());
+     
+     b.setOnClickListener(new OnClickListener() {    	 			
 			@Override
 			public void onClick(View v) {
-				String s =  ((Button) v).getText().toString();
-				int nyVerdi = Integer.valueOf(s)+1;
-				
-				WindWidgetConfig c = WindWidgetConfigManager.getConfigFor(VindsidenActivity.this.appWidgetId);
-				c.setStationID(nyVerdi);
-				((Button) v).setText(""+nyVerdi);
-				
+				Button b2 = ((Button) v);
+				b2.setText((""+"");
 			}
-		}); 
-		*/		
+		});
 
 		
 		String message = customMessage == null ? "WindWidget oppsett" : customMessage;
