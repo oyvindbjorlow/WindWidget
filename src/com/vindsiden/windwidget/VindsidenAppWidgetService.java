@@ -17,11 +17,13 @@ import android.app.AlarmManager;
 import android.app.IntentService;
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
+import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.text.format.Time;
+import android.util.Log;
 import android.widget.RemoteViews;
 
 /**
@@ -37,8 +39,12 @@ public class VindsidenAppWidgetService extends IntentService {
 	private static final String WIDGET_PREFIX = "/widget_id/";
 	
 	static int buckCounter = 0;
-	// Larkollen XML - last entry. TODO id should be a config'able parameter
-	private static final String URL = "http://www.vindsiden.no/xml.aspx?id=1&last=1";
+	// Larkollen XML - last entry. 
+	private static final String URL_PREFIX = "http://www.vindsiden.no/xml.aspx?id=";//"http://www.vindsiden.no/xml.aspx?id=1&last=1";
+	private static final String URL_POSTFIX = "&last=1"; 
+
+  private static final String tag = AppWidgetProvider.class.getName(); // getSimpleName());
+  
 	// alternatives for more data:
 	//"http://www.vindsiden.no/xml.aspx?id=1&hours=1";//"http://www.vindsiden.no/xml.aspx?id=1";	
 
@@ -146,7 +152,11 @@ public class VindsidenAppWidgetService extends IntentService {
 		// dra ut data fra XML på vindsiden http://www.vindsiden.no/xml.aspx?id=1
 		List<Measurement> measurements;
 		try {
-			measurements = (new VindsidenWebXmlReader()).loadXmlFromNetwork(URL);
+			String urlString = URL_PREFIX+ 
+					VindsidenAppWidgetService.config.getStationID()+
+					URL_POSTFIX;
+			Log.d(tag, urlString);
+			measurements = (new VindsidenWebXmlReader()).loadXmlFromNetwork(urlString);
 		} 
 		catch (IOException e) { 
 			throw new RuntimeException (getResources().getString(R.string.connection_error)); 
@@ -154,7 +164,7 @@ public class VindsidenAppWidgetService extends IntentService {
 		catch (XmlPullParserException e) { 
 			throw new RuntimeException ( getResources().getString(R.string.xml_error));
 		}		
-		finally { // todo: any necessary cleanup. 
+		finally { // TODO : any necessary cleanup. 
 		} 		
 		
 		// assume the most recent data is read first from the XML - it probably is, but there's possibility for error here.
@@ -166,9 +176,10 @@ public class VindsidenAppWidgetService extends IntentService {
 		// sett en veldig enkel knapp gfx (char basert pt) for å indikere vindstyrke og retning
 		StringBuffer windText = new StringBuffer("");
 		windText.append(PresentationHelper.getWindStrengthString(mostRecentMeasurement.getWindAvg()));
-		windText.append(PresentationHelper.getWindDirectionString(mostRecentMeasurement.getDirectionAvg()));
+		windText.append("\n"+PresentationHelper.getWindDirectionString(mostRecentMeasurement.getDirectionAvg()));
+		windText.append("\n"+"@"+mostRecentMeasurement.getStationID());
 		//debug: add counter
-		windText.append(buckCounter++);
+		windText.append("-" + buckCounter++);
 		views.setTextViewText(R.id.widgetButton, windText);
 		
 		setProcessWidgetClickIntent(views, appWidgetId, "aMessage");

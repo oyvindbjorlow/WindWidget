@@ -9,7 +9,7 @@ public class WindWidgetConfig {
 	private Time startTime, endTime;
 	private int frequenceIntervalInMinutes;
 
-	public WindWidgetConfig(int StationID, int widgetID, Time startTime, Time endTime, int frequenceIntervalInMinutes) {
+	public WindWidgetConfig(int stationID, int widgetID, Time startTime, Time endTime, int frequenceIntervalInMinutes) {
 		setStationID(stationID);
 		setWidgetID(widgetID);
 		setStartTime(startTime);
@@ -30,7 +30,7 @@ public class WindWidgetConfig {
 		t2.minute = 0;
 		t2.second = 0;
 
-		return new WindWidgetConfig(1, 1, t, t2, 15); // Hardcode: freq.15min, station 1, widget1
+		return new WindWidgetConfig(1, 1, t, t2, 15); // Hardcode: freq.15min, station 1, widget1 // bugs v 5 min default?!
 	}
 
 	public int getStationID() {

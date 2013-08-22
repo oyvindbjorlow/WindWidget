@@ -5,6 +5,7 @@ import static android.appwidget.AppWidgetManager.INVALID_APPWIDGET_ID;
 
 import com.vindsiden.windwidget.config.WindWidgetConfig;
 import com.vindsiden.windwidget.config.WindWidgetConfigManager;
+import com.vindsiden.windwidget.model.BDayWidgetModel;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -24,7 +25,7 @@ import android.widget.TimePicker.OnTimeChangedListener;
  */
 public class VindsidenActivity extends Activity {
 	
-	private int appWidgetId;
+	
 	
 	/**
 	 * {@inheritDoc}
@@ -40,8 +41,17 @@ public class VindsidenActivity extends Activity {
 		// Øyvind: added, should be useful if we get to introduce several config objects
 		// TODO: change config access code here to access config object with ID matching
 		// change: int appWidgetId set as an instance variable to be reachable from the listener(possibly messy idea)?  
-		appWidgetId = intent.getIntExtra(EXTRA_APPWIDGET_ID, INVALID_APPWIDGET_ID);
+		final int appWidgetId = intent.getIntExtra(EXTRA_APPWIDGET_ID, INVALID_APPWIDGET_ID);
 
+		//"this" as context could be wrong? should it be something different?
+		/*
+		BDayWidgetModel bwm = BDayWidgetModel.retrieveModel(this, appWidgetId);
+		Button b = (Button) findViewById(R.id.activityStationIdButton);
+		b.setText (bwm.getName());
+		*/
+		
+		
+		
 		/*
 		//Testing out config data
 		WindWidgetConfig c = WindWidgetConfigManager.getConfigFor(appWidgetId);
@@ -89,6 +99,23 @@ public class VindsidenActivity extends Activity {
 		}
 		;
 		spinner.setSelection(defaultChoice);
+		
+		Spinner stationIdSpinner = (Spinner) findViewById(R.id.spinner2);			
+		// TODO some more robustness here would be nice I suppose (?)
+		stationIdSpinner.setSelection(VindsidenAppWidgetService.config.getStationID());
+		stationIdSpinner.setOnItemSelectedListener(new OnItemSelectedListener() {
+			@Override
+			public void onItemSelected(android.widget.AdapterView<?> parent, android.view.View view, int position, long id) {
+				// TODO Øyvind: Noted som stackoverflow people checked for position > (that is, not >= ) 0 ... 
+				// not certain if the Spinner class might be bug prone
+				VindsidenAppWidgetService.config.setStationID(position);
+			};
+
+			public void onNothingSelected(android.widget.AdapterView<?> arg0) {
+				// TODO (?)
+			};
+		});
+
 
 		TimePicker timePick2 = (TimePicker) findViewById(R.id.timePicker2);
 		initTimepicker(timePick2, VindsidenAppWidgetService.config.getStartTime());
@@ -99,7 +126,7 @@ public class VindsidenActivity extends Activity {
 		spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
 			@Override
 			public void onItemSelected(android.widget.AdapterView<?> parent, android.view.View view, int position, long id) {
-				// Øyvind: Noted som stackoverflow people checked for position > (that is, not >= ) 0 ... not certain if the
+				// TODO Øyvind: Noted som stackoverflow people checked for position > (that is, not >= ) 0 ... not certain if the
 				// spinner might be bug prone
 				if (position >= 0) {
 					String choiceString = (String) parent.getItemAtPosition(position);
