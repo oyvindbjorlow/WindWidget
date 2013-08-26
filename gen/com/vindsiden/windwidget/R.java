@@ -18,16 +18,17 @@ public final class R {
         public static final int icon=0x7f020000;
     }
     public static final class id {
-        public static final int activityStationIdButton=0x7f070003;
+        public static final int TextView01=0x7f070006;
         public static final int passcode_view=0x7f070001;
-        public static final int spinner1=0x7f070007;
+        public static final int spinner1=0x7f070008;
         public static final int spinner2=0x7f070005;
-        public static final int textView1=0x7f070006;
-        public static final int textView2=0x7f070008;
-        public static final int textView3=0x7f07000a;
+        public static final int textView1=0x7f070007;
+        public static final int textView2=0x7f070009;
+        public static final int textView3=0x7f07000b;
         public static final int textView4=0x7f070004;
-        public static final int timePicker2=0x7f070009;
-        public static final int timePicker3=0x7f07000b;
+        public static final int textView5=0x7f070003;
+        public static final int timePicker2=0x7f07000a;
+        public static final int timePicker3=0x7f07000c;
         public static final int widgetButton=0x7f070000;
         public static final int windwidget_view=0x7f070002;
     }

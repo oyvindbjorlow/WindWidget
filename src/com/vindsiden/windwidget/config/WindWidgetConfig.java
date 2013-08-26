@@ -3,12 +3,17 @@ package com.vindsiden.windwidget.config;
 import android.text.format.Time;
 
 public class WindWidgetConfig {
+	
+	public static String PREFERENCES_FILE_PREFIX = "WindWidgetPreferences";
+	public static String PREF_STATIONID_KEY = "STATION_ID";
 	private int stationID, widgetID;
 	// private String stationName; //unused per se
 
 	private Time startTime, endTime;
 	private int frequenceIntervalInMinutes;
 
+	
+	
 	public WindWidgetConfig(int stationID, int widgetID, Time startTime, Time endTime, int frequenceIntervalInMinutes) {
 		setStationID(stationID);
 		setWidgetID(widgetID);

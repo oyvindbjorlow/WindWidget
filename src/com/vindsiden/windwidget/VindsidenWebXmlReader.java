@@ -30,14 +30,16 @@ public class VindsidenWebXmlReader {
 	public static final String WIFI = "Wi-Fi";
 	public static final String ANY = "Any";
 
-	// Øyvind - specify a value. for now: WIFI only, not pay-per-byte mobile internet. TODO impelment usage.
-	// public static String sPref = null;
+	// TODO impelment usage.
+	// example: user could set the widgets to upload only when WIFI is available, not pay-per-byte mobile internet. 
 	public static String sPref = WIFI;
 
 	public List<Measurement> loadXmlFromNetwork(String url) throws XmlPullParserException, IOException {
 
 		List<Measurement> result;
-
+		
+		// TODO impelment preferences usage.
+		// example: user could set the widgets to upload only when WIFI is available, not pay-per-byte mobile internet. 
 		if ((sPref.equals(ANY)) && (wifiConnected || mobileConnected)) {
 			result = loadXmlFromNetworkNow(url);
 		} else if ((sPref.equals(WIFI)) && (wifiConnected)) {
@@ -82,7 +84,7 @@ public class VindsidenWebXmlReader {
 	// Given a string representation of a URL, sets up a connection and gets
 	// an input stream.
 	private InputStream downloadUrl(String urlString) throws IOException {
-		URL url = new URL(urlString); // Øyvind: java.net specification added
+		URL url = new URL(urlString); 
 		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 		conn.setConnectTimeout(CONNECT_TIMEOUT);
 		conn.setReadTimeout(READ_TIMEOUT);

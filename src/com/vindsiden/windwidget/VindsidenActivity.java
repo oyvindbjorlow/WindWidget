@@ -4,19 +4,13 @@ import static android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID;
 import static android.appwidget.AppWidgetManager.INVALID_APPWIDGET_ID;
 
 import com.vindsiden.windwidget.config.WindWidgetConfig;
-import com.vindsiden.windwidget.config.WindWidgetConfigManager;
-import com.vindsiden.windwidget.model.BDayWidgetModel;
 
 import android.app.Activity;
-import android.appwidget.AppWidgetProvider;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.format.Time;
-import android.util.Log;
-import android.view.View;
-import android.view.View.OnClickListener;
 import android.widget.AdapterView.OnItemSelectedListener;
-import android.widget.Button;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.TimePicker;
@@ -26,8 +20,8 @@ import android.widget.TimePicker.OnTimeChangedListener;
  * Receives requests from App Widgets
  */
 public class VindsidenActivity extends Activity {
-	
-	private static final String tag = AppWidgetProvider.class.getName(); // getSimpleName());	
+
+	int appWidgetId;
 	
 	/**
 	 * {@inheritDoc}
@@ -39,31 +33,39 @@ public class VindsidenActivity extends Activity {
 
 		Intent intent = getIntent();
 		String customMessage = intent.getStringExtra("MESSAGE");
-		
+
 		// Øyvind: added, should be useful if we get to introduce several config objects
 		// TODO: change config access code here to access config object with ID matching
-		// change: int appWidgetId set as an instance variable to be reachable from the listener(possibly messy idea)?  
-		final int appWidgetId = intent.getIntExtra(EXTRA_APPWIDGET_ID, INVALID_APPWIDGET_ID);
+		// change: int appWidgetId set as an instance variable to be reachable from the listener(possibly messy idea)?
+		appWidgetId = intent.getIntExtra(EXTRA_APPWIDGET_ID, INVALID_APPWIDGET_ID);
 
-		//Øyvind: test stateful widgets, see if we can recreate the widget from old state:
-	   BDayWidgetModel bwm = BDayWidgetModel.retrieveModel(this, appWidgetId);
-     if (bwm == null)
-     {
-        Log.d(tag,"No widget model found for:" + appWidgetId);
-        return; // NB! RETURN STATEMENT TODO CHECK
-     }
-     
-     Button b = (Button ) findViewById(R.id.activityStationIdButton);
-     b.setText(bwm.getName());
-     
-     b.setOnClickListener(new OnClickListener() {    	 			
+		// preferences in a file test - accessing from an action seems simple.
+		SharedPreferences pref = getSharedPreferences(WindWidgetConfig.PREFERENCES_FILE_PREFIX+appWidgetId,0);
+		int widgetStationID = pref.getInt(WindWidgetConfig.PREF_STATIONID_KEY, 1); //default: ID 1, but try to read this from a pref. file
+		
+		Spinner stationIdSpinner = (Spinner) findViewById(R.id.spinner2);
+		// TODO some more robustness here would be nice I suppose (?)
+		//stationIdSpinner.setSelection(VindsidenAppWidgetService.config.getStationID());
+		// use this is preferences bugs:
+		//widgetStationID = VindsidenAppWidgetService.config.getStationID());
+		stationIdSpinner.setSelection(widgetStationID);
+		stationIdSpinner.setOnItemSelectedListener(new OnItemSelectedListener() {
 			@Override
-			public void onClick(View v) {
-				Button b2 = ((Button) v);
-				b2.setText((""+"");
-			}
-		});
+			public void onItemSelected(android.widget.AdapterView<?> parent, android.view.View view, int position, long id) {
+				// TODO Øyvind: Noted som stackoverflow people checked for position > (that is, not >= ) 0 ...
+				// not certain if the Spinner class might be bug prone
+				
+				//VindsidenAppWidgetService.config.setStationID(position);
+				SharedPreferences pref = getSharedPreferences(WindWidgetConfig.PREFERENCES_FILE_PREFIX+appWidgetId,0);
+				SharedPreferences.Editor editor = pref.edit();
+				editor.putInt(WindWidgetConfig.PREF_STATIONID_KEY, position);
+				editor.commit();														
+			};
 
+			public void onNothingSelected(android.widget.AdapterView<?> arg0) {
+				// TODO (?)
+			};
+		});
 		
 		String message = customMessage == null ? "WindWidget oppsett" : customMessage;
 		TextView tv = (TextView) findViewById(R.id.windwidget_view);
@@ -91,23 +93,6 @@ public class VindsidenActivity extends Activity {
 		}
 		;
 		spinner.setSelection(defaultChoice);
-		
-		Spinner stationIdSpinner = (Spinner) findViewById(R.id.spinner2);			
-		// TODO some more robustness here would be nice I suppose (?)
-		stationIdSpinner.setSelection(VindsidenAppWidgetService.config.getStationID());
-		stationIdSpinner.setOnItemSelectedListener(new OnItemSelectedListener() {
-			@Override
-			public void onItemSelected(android.widget.AdapterView<?> parent, android.view.View view, int position, long id) {
-				// TODO Øyvind: Noted som stackoverflow people checked for position > (that is, not >= ) 0 ... 
-				// not certain if the Spinner class might be bug prone
-				VindsidenAppWidgetService.config.setStationID(position);
-			};
-
-			public void onNothingSelected(android.widget.AdapterView<?> arg0) {
-				// TODO (?)
-			};
-		});
-
 
 		TimePicker timePick2 = (TimePicker) findViewById(R.id.timePicker2);
 		initTimepicker(timePick2, VindsidenAppWidgetService.config.getStartTime());
@@ -118,8 +103,8 @@ public class VindsidenActivity extends Activity {
 		spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
 			@Override
 			public void onItemSelected(android.widget.AdapterView<?> parent, android.view.View view, int position, long id) {
-				// TODO Øyvind: Noted som stackoverflow people checked for position > (that is, not >= ) 0 ... not certain if the
-				// spinner might be bug prone
+				// TODO Øyvind: Noted som stackoverflow people checked for position > (that is, not >= ) 0 ... not certain if
+				// the spinner might be bug prone
 				if (position >= 0) {
 					String choiceString = (String) parent.getItemAtPosition(position);
 					int freq = Integer.valueOf(choiceString);

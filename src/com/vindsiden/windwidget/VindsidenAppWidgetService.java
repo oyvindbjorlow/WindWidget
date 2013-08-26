@@ -9,7 +9,6 @@ import java.util.List;
 import org.xmlpull.v1.XmlPullParserException;
 
 import com.vindsiden.windwidget.config.WindWidgetConfig;
-import com.vindsiden.windwidget.config.WindWidgetConfigManager;
 import com.vindsiden.windwidget.model.Measurement;
 import com.vindsiden.windwidget.model.PresentationHelper;
 
@@ -21,6 +20,7 @@ import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.text.format.Time;
 import android.util.Log;
@@ -34,14 +34,17 @@ import android.widget.RemoteViews;
  * 
  */
 public class VindsidenAppWidgetService extends IntentService {
+	// Vindsiden.no - URL for retrieving the last XML weather measurement at the specified station (specified by id=X). 
+	private static final String URL_PREFIX = "http://www.vindsiden.no/xml.aspx?id=";//"http://www.vindsiden.no/xml.aspx?id=1&last=1";
+	private static final String URL_POSTFIX = "&last=1"; 
+
 	private static final String PACKAGE_NAME = VindsidenAppWidgetService.class.getPackage().getName();
 	private static final String NEXT_SCHEDULE_URI_POSTFIX = "/next_schedule";
 	private static final String WIDGET_PREFIX = "/widget_id/";
-	
+
+	private static final Measurement PHONY_MEASUREMENT = new Measurement("", "", "?", "-999"); // For robustness if XML doesn't include any Measurements we can read. -999 triggers "?" as direction
+
 	static int buckCounter = 0;
-	// Larkollen XML - last entry. 
-	private static final String URL_PREFIX = "http://www.vindsiden.no/xml.aspx?id=";//"http://www.vindsiden.no/xml.aspx?id=1&last=1";
-	private static final String URL_POSTFIX = "&last=1"; 
 
   private static final String tag = AppWidgetProvider.class.getName(); // getSimpleName());
   
@@ -98,6 +101,8 @@ public class VindsidenAppWidgetService extends IntentService {
 		// it could for examle first update at 0903, then 0918, 0933 etc ...
 		// yet, the next day, the first measurement should be made at the getStartTime() (0900)
 		// and following measurements should be made a predictable interavl increments (0915, 0930)
+		// TODO also, I assume the real frequence here is (FREQ+processing time for downloading and showing 1 measurement)
+		//      but that's acceptable for now.
 		Time nextUpdateTime = new Time();		
 		nextUpdateTime.set(System.currentTimeMillis() + 
 				VindsidenAppWidgetService.config.getFrequenceIntervalInMicroseconds());
@@ -149,11 +154,15 @@ public class VindsidenAppWidgetService extends IntentService {
 		RemoteViews views = new RemoteViews(PACKAGE_NAME, R.layout.app_widget_layout);
 		views.setTextViewText(R.id.passcode_view, "Beskrivelse - txtvarsel?");
 
-		// dra ut data fra XML på vindsiden http://www.vindsiden.no/xml.aspx?id=1
+		//widgetsStationID=VindsidenAppWidgetService.config.getStationID();
+		SharedPreferences pref = getSharedPreferences(WindWidgetConfig.PREFERENCES_FILE_PREFIX+appWidgetId,0);
+		int widgetStationID = pref.getInt(WindWidgetConfig.PREF_STATIONID_KEY, 1); //default: ID 1, but try to read this from a pref. file
+		
 		List<Measurement> measurements;
 		try {
-			String urlString = URL_PREFIX+ 
-					VindsidenAppWidgetService.config.getStationID()+
+			String urlString = 
+					URL_PREFIX + 
+					widgetStationID +
 					URL_POSTFIX;
 			Log.d(tag, urlString);
 			measurements = (new VindsidenWebXmlReader()).loadXmlFromNetwork(urlString);
@@ -171,7 +180,7 @@ public class VindsidenAppWidgetService extends IntentService {
 		Measurement mostRecentMeasurement = measurements.get(0);
 		// add a measure of tolerance (for the case where XML exists, but has readable measurements) 
 		if (mostRecentMeasurement == null) { 
-			mostRecentMeasurement = new Measurement("", "", "?", "-999"); // -999 triggers "?" as direction
+			mostRecentMeasurement = PHONY_MEASUREMENT; // for robustness, make sure we always have some data in a Measurement object here.
 		}
 		// sett en veldig enkel knapp gfx (char basert pt) for å indikere vindstyrke og retning
 		StringBuffer windText = new StringBuffer("");
