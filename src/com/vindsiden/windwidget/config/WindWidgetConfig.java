@@ -6,7 +6,11 @@ public class WindWidgetConfig {
 	
 	public static String PREFERENCES_FILE_PREFIX = "WindWidgetPreferences";
 	public static String PREF_STATIONID_KEY = "STATION_ID";
-	private int stationID, widgetID;
+	
+	//TODO NB these are not really in use per se.
+	// widgetID is handled by Android itself, and stationID is written/read as 
+	// a preference file suffixed with the widgetID.
+	private int stationID, widgetID;  
 	// private String stationName; //unused per se
 
 	private Time startTime, endTime;

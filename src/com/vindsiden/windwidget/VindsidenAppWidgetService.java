@@ -51,7 +51,7 @@ public class VindsidenAppWidgetService extends IntentService {
 	// alternatives for more data:
 	//"http://www.vindsiden.no/xml.aspx?id=1&hours=1";//"http://www.vindsiden.no/xml.aspx?id=1";	
 
-	//todo: support multiple configs (for multiple parallell widgets)
+	//todo: Fullscale support multiple configs (for multiple parallell widgets)
 	public static final WindWidgetConfig config = WindWidgetConfig.createADefaultConfig();
 	
 	/**
@@ -190,6 +190,11 @@ public class VindsidenAppWidgetService extends IntentService {
 		//debug: add counter
 		windText.append("-" + buckCounter++);
 		views.setTextViewText(R.id.widgetButton, windText);
+		
+		
+		// debug: arrow:
+		//views.setTextViewText(R.id.widgetButton, windText);
+		//views.setImageViewResource(R.id.widgetButton, R.drawable.icon);
 		
 		setProcessWidgetClickIntent(views, appWidgetId, "aMessage");
 	    
