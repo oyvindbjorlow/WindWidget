@@ -44,8 +44,7 @@ public class VindsidenAppWidgetProvider extends AppWidgetProvider {
 	/**
 	 * Kalles når hver instans lages og kalles på nytt hvis provider_config.xml fila spesifiserer frekvensintervall Vår
 	 * xml fil spesifiserer IKKE et slikt intervall, så jeg antar pt denne bare kalles hver gang en ny appwidget instans
-	 * legges til container. 
-	 * {@inheritDoc}
+	 * legges til container. {@inheritDoc}
 	 */
 	@Override
 	public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
@@ -68,8 +67,8 @@ public class VindsidenAppWidgetProvider extends AppWidgetProvider {
 	}
 
 	/**
-	 * onDeleted kalles hver gang en appwidget slettes fra sin host.
-	 * Not doing anything here anymore, so the onDeleted() override is removed for now.
+	 * onDeleted kalles hver gang en appwidget slettes fra sin host. Not doing anything here anymore, so the onDeleted()
+	 * override is removed for now.
 	 * 
 	 */
 

@@ -20,7 +20,6 @@ import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.net.Uri;
 import android.text.format.Time;
 import android.util.Log;
@@ -34,26 +33,27 @@ import android.widget.RemoteViews;
  * 
  */
 public class VindsidenAppWidgetService extends IntentService {
-	// Vindsiden.no - URL for retrieving the last XML weather measurement at the specified station (specified by id=X). 
-	private static final String URL_PREFIX = "http://www.vindsiden.no/xml.aspx?id=";//"http://www.vindsiden.no/xml.aspx?id=1&last=1";
-	private static final String URL_POSTFIX = "&last=1"; 
+	// Vindsiden.no - URL for retrieving the last XML weather measurement at the specified station (specified by id=X).
+	private static final String URL_PREFIX = "http://www.vindsiden.no/xml.aspx?id=";// "http://www.vindsiden.no/xml.aspx?id=1&last=1";
+	private static final String URL_POSTFIX = "&last=1";
 
 	private static final String PACKAGE_NAME = VindsidenAppWidgetService.class.getPackage().getName();
 	private static final String NEXT_SCHEDULE_URI_POSTFIX = "/next_schedule";
-	private static final String WIDGET_PREFIX = "/widget_id/";
+	private static final String WIDGET_URI_PREFIX = "/widget_id/";
 
-	private static final Measurement PHONY_MEASUREMENT = new Measurement("", "", "?", "-999"); // For robustness if XML doesn't include any Measurements we can read. -999 triggers "?" as direction
+	private static final Measurement PHONY_MEASUREMENT = new Measurement("", "", "?", "-999"); // For robustness if XML
+																																															// doesn't include any
+																																															// Measurements we can
+																																															// read. -999 triggers "?"
+																																															// as direction
 
 	static int buckCounter = 0;
 
-  private static final String tag = AppWidgetProvider.class.getName(); // getSimpleName());
-  
-	// alternatives for more data:
-	//"http://www.vindsiden.no/xml.aspx?id=1&hours=1";//"http://www.vindsiden.no/xml.aspx?id=1";	
+	private static final String tag = AppWidgetProvider.class.getName(); // getSimpleName());
 
-	//todo: Fullscale support multiple configs (for multiple parallell widgets)
-	public static final WindWidgetConfig config = WindWidgetConfig.createADefaultConfig();
-	
+	// alternatives for more data:
+	// "http://www.vindsiden.no/xml.aspx?id=1&hours=1";//"http://www.vindsiden.no/xml.aspx?id=1";
+
 	/**
 	 * Creates an instance with a name defined by the constant
 	 */
@@ -78,57 +78,67 @@ public class VindsidenAppWidgetService extends IntentService {
 
 		int incomingAppWidgetId = intent.getIntExtra(EXTRA_APPWIDGET_ID, INVALID_APPWIDGET_ID);
 		if (incomingAppWidgetId != INVALID_APPWIDGET_ID) {
+			// dette trigges i hvert fal fra Providers onUpdate (ved innlegg av ny widget). antagelig aldri ellers?
 			updateOneAppWidget(appWidgetManager, incomingAppWidgetId);
 		} else {
+			// dette trigges av pendingIntent fyrt fra scheduleNextUpdate()
 			updateAllAppWidgets(appWidgetManager);
 		}
 		scheduleNextUpdate();
 	}
 
 	/**
-	 * Schedules the next app widget update to occur 
-	 * previously scheduled app widget update is effectively canceled and replaced by the newly scheduled update.
+	 * Schedules the next app widget update to occur previously scheduled app widget update is effectively canceled and
+	 * replaced by the newly scheduled update.
 	 */
 	private void scheduleNextUpdate() {
 		Intent updateMeasurementIntent = new Intent(this, this.getClass());
 		// A content URI for this Intent may be unnecessary. (comment from the example from Programmer Bruce)
-		// TODO should this be linked to an appwidget ID as well, in case we have different widgets with different schedules handled by the same service?
-		updateMeasurementIntent.setData(Uri.parse("content://" + PACKAGE_NAME + NEXT_SCHEDULE_URI_POSTFIX)); 
+		// TODO should this be linked to an appwidget ID as well, in case we have different widgets with different schedules
+		// handled by the same service?
+		updateMeasurementIntent.setData(Uri.parse("content://" + PACKAGE_NAME + NEXT_SCHEDULE_URI_POSTFIX));
 		PendingIntent updateMeasurementPendingIntent = PendingIntent.getService(this, 0, updateMeasurementIntent,
 				PendingIntent.FLAG_UPDATE_CURRENT);
-		
+
 		// In effect, the first day update times will be dependent on at what time the user started the app,
 		// it could for examle first update at 0903, then 0918, 0933 etc ...
 		// yet, the next day, the first measurement should be made at the getStartTime() (0900)
 		// and following measurements should be made a predictable interavl increments (0915, 0930)
 		// TODO also, I assume the real frequence here is (FREQ+processing time for downloading and showing 1 measurement)
-		//      but that's acceptable for now.
-		Time nextUpdateTime = new Time();		
-		nextUpdateTime.set(System.currentTimeMillis() + 
-				VindsidenAppWidgetService.config.getFrequenceIntervalInMicroseconds());
+		// but that's acceptable for now.
+		Time nextUpdateTime = new Time();
+		Log.d(tag,"scheduleNextUpdate called at approx: "+System.currentTimeMillis());
+		nextUpdateTime.set(System.currentTimeMillis()
+				+ WindWidgetConfig.getFrequenceIntervalInMicroseconds(this));
 		long nextUpdate = nextUpdateTime.toMillis(false);
-		
+
 		Time endTimeToday = new Time();
 		endTimeToday.set(System.currentTimeMillis());
-		endTimeToday.hour = VindsidenAppWidgetService.config.getEndTime().hour;
-		endTimeToday.minute = VindsidenAppWidgetService.config.getEndTime().minute;
-		
-		// schedule next update tomorrow at startTime 
-		// if the next update would otherwise have been after our update interval ends for today		
+		Time configEndTime = WindWidgetConfig.getEndTime(this);
+		endTimeToday.hour = configEndTime.hour;
+		endTimeToday.minute = configEndTime.minute;
+
+		// schedule next update tomorrow at startTime
+		// if the next update would otherwise have been after our update interval ends for today
 		if (nextUpdateTime.after(endTimeToday)) {
 			Time startTimeToday = new Time();
 			startTimeToday.set(System.currentTimeMillis());
-			startTimeToday.hour = VindsidenAppWidgetService.config.getStartTime().hour;
-			startTimeToday.minute = VindsidenAppWidgetService.config.getStartTime().minute;
-			
-			long oneDayInMils= (1*24*60*60*1000); //add one days worth of miliseconds. (24 hours 60 minutes 60 seconds)
+			Time configStartTime = WindWidgetConfig.getStartTime(this);
+			startTimeToday.hour = configStartTime.hour;
+			startTimeToday.minute = configStartTime.minute;
+
+			long oneDayInMils = (1 * 24 * 60 * 60 * 1000); // add one days worth of miliseconds. (24 hours 60 minutes 60
+																											// seconds)
+			//getSharedPreferences("hei",0);
 			
 			nextUpdate = startTimeToday.toMillis(false) + oneDayInMils;
-		}			
-		
+		}
+
 		AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
 		// TODO: check: RTC could specifiy "only update a non-sleeping device?"
-		alarmManager.set(AlarmManager.RTC, nextUpdate, updateMeasurementPendingIntent);		
+		alarmManager.set(AlarmManager.RTC, nextUpdate, updateMeasurementPendingIntent);
+		Log.d(tag,"scheduleNextUpdate set the alarm for: "+nextUpdate);
+		// fra doc: If there is already an alarm scheduled for the same IntentSender, it will first be canceled.
 	}
 
 	/**
@@ -139,6 +149,13 @@ public class VindsidenAppWidgetService extends IntentService {
 		ComponentName appWidgetProvider = new ComponentName(this, VindsidenAppWidgetProvider.class);
 		int[] appWidgetIds = appWidgetManager.getAppWidgetIds(appWidgetProvider);
 		int N = appWidgetIds.length;
+		
+		StringBuffer idsToUpdate = new StringBuffer();
+		for (int oneId : appWidgetIds) {
+			idsToUpdate.append(" "+oneId);
+		}				
+		Log.d(tag, "updateAllAppWidgets called for set: "+idsToUpdate);
+		
 		for (int i = 0; i < N; i++) {
 			int appWidgetId = appWidgetIds[i];
 			updateOneAppWidget(appWidgetManager, appWidgetId);
@@ -150,13 +167,11 @@ public class VindsidenAppWidgetService extends IntentService {
 	 * handling for its buttons.
 	 */
 	private void updateOneAppWidget(AppWidgetManager appWidgetManager, int appWidgetId) {
-
+		Log.d(tag, "updateOneAppWidgets called for id: "+appWidgetId);
 		RemoteViews views = new RemoteViews(PACKAGE_NAME, R.layout.app_widget_layout);
 		views.setTextViewText(R.id.passcode_view, "Beskrivelse - txtvarsel?");
-
-		//widgetsStationID=VindsidenAppWidgetService.config.getStationID();
-		SharedPreferences pref = getSharedPreferences(WindWidgetConfig.PREFERENCES_FILE_PREFIX+appWidgetId,0);
-		int widgetStationID = pref.getInt(WindWidgetConfig.PREF_STATIONID_KEY, 1); //default: ID 1, but try to read this from a pref. file
+		
+		int widgetStationID = WindWidgetConfig.getWindStationId(this, appWidgetId);
 		
 		List<Measurement> measurements;
 		try {
@@ -185,12 +200,18 @@ public class VindsidenAppWidgetService extends IntentService {
 		// sett en veldig enkel knapp gfx (char basert pt) for å indikere vindstyrke og retning
 		StringBuffer windText = new StringBuffer("");
 		windText.append(PresentationHelper.getWindStrengthString(mostRecentMeasurement.getWindAvg()));
-		windText.append("\n"+PresentationHelper.getWindDirectionString(mostRecentMeasurement.getDirectionAvg()));
-		windText.append("\n"+"@"+mostRecentMeasurement.getStationID());
-		//debug: add counter
-		windText.append("-" + buckCounter++);
+		windText.append(//"\n"
+				""+PresentationHelper.getWindDirectionString(mostRecentMeasurement.getDirectionAvg()));
+					
+		Time t = new Time();
+		t.set(System.currentTimeMillis());
+		windText.append("\n"+
+				//t.monthDay+"." + t.month+" "+
+				//t.hour+""+ 
+				t.minute+
+				"@"+mostRecentMeasurement.getStationID());
+			
 		views.setTextViewText(R.id.widgetButton, windText);
-		
 		
 		// debug: arrow:
 		//views.setTextViewText(R.id.widgetButton, windText);
@@ -200,20 +221,17 @@ public class VindsidenAppWidgetService extends IntentService {
 	    
 		appWidgetManager.updateAppWidget(appWidgetId, views);
 	}
-	
-	  /** 
-	   * Configures button clicks to pass the current message of the 
-	   * parent app widget to the Activity.
-	   */
-	  private void setProcessWidgetClickIntent(RemoteViews views, int appWidgetId, String newMessage)
-	  {
-	    Intent intent = new Intent(this, VindsidenActivity.class);
-	    intent.setData(Uri.parse("content://" + PACKAGE_NAME + WIDGET_PREFIX + appWidgetId));
-	    intent.putExtra("ARGUMENT", newMessage); // not really used anymore. a debug option.	  
-	    intent.putExtra(EXTRA_APPWIDGET_ID, appWidgetId);
-	    PendingIntent pendingIntent =
-	        PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-	    views.setOnClickPendingIntent(R.id.widgetButton, pendingIntent);
-	  }
+
+	/**
+	 * Configures button clicks to pass the current message of the parent app widget to the Activity.
+	 */
+	private void setProcessWidgetClickIntent(RemoteViews views, int appWidgetId, String newMessage) {
+		Intent intent = new Intent(this, VindsidenActivity.class);
+		intent.setData(Uri.parse("content://" + PACKAGE_NAME + WIDGET_URI_PREFIX + appWidgetId));
+		intent.putExtra("ARGUMENT", newMessage); // not really used anymore. a debug option.
+		intent.putExtra(EXTRA_APPWIDGET_ID, appWidgetId);
+		PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+		views.setOnClickPendingIntent(R.id.widgetButton, pendingIntent);
+	}
 
 }

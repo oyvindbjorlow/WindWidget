@@ -7,7 +7,6 @@ import com.vindsiden.windwidget.config.WindWidgetConfig;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.format.Time;
 import android.widget.AdapterView.OnItemSelectedListener;
@@ -34,14 +33,9 @@ public class VindsidenActivity extends Activity {
 		Intent intent = getIntent();
 		String customMessage = intent.getStringExtra("MESSAGE");
 
-		// Øyvind: added, should be useful if we get to introduce several config objects
-		// TODO: change config access code here to access config object with ID matching
-		// change: int appWidgetId set as an instance variable to be reachable from the listener(possibly messy idea)?
 		appWidgetId = intent.getIntExtra(EXTRA_APPWIDGET_ID, INVALID_APPWIDGET_ID);
-
-		// preferences in a file test - accessing from an action seems simple.
-		SharedPreferences pref = getSharedPreferences(WindWidgetConfig.PREFERENCES_FILE_PREFIX+appWidgetId,0);
-		int widgetStationID = pref.getInt(WindWidgetConfig.PREF_STATIONID_KEY, 1); //default: ID 1, but try to read this from a pref. file
+	
+		int widgetStationID = WindWidgetConfig.getWindStationId(this,appWidgetId); 
 		
 		Spinner stationIdSpinner = (Spinner) findViewById(R.id.spinner2);
 		// TODO some more robustness here would be nice I suppose (?)
@@ -53,13 +47,9 @@ public class VindsidenActivity extends Activity {
 			@Override
 			public void onItemSelected(android.widget.AdapterView<?> parent, android.view.View view, int position, long id) {
 				// TODO Øyvind: Noted som stackoverflow people checked for position > (that is, not >= ) 0 ...
-				// not certain if the Spinner class might be bug prone
+				// not certain if the Spinner class might be bug prone			
+				WindWidgetConfig.setWindStationId(VindsidenActivity.this, appWidgetId,position);
 				
-				//VindsidenAppWidgetService.config.setStationID(position);
-				SharedPreferences pref = getSharedPreferences(WindWidgetConfig.PREFERENCES_FILE_PREFIX+appWidgetId,0);
-				SharedPreferences.Editor editor = pref.edit();
-				editor.putInt(WindWidgetConfig.PREF_STATIONID_KEY, position);
-				editor.commit();														
 			};
 
 			public void onNothingSelected(android.widget.AdapterView<?> arg0) {
@@ -73,7 +63,7 @@ public class VindsidenActivity extends Activity {
 
 		Spinner spinner = (Spinner) findViewById(R.id.spinner1);
 		int defaultChoice = 1;
-		int oldFreq = VindsidenAppWidgetService.config.getFrequenceIntervalInMinutes();
+		int oldFreq = WindWidgetConfig.getFrequenceIntervalInMinutes(this);
 		// TODO some robustness here would be nice I suppose - freq values are defined both in XML and hardcoded here as of
 		// now.
 		if (oldFreq == 5) {
@@ -95,10 +85,10 @@ public class VindsidenActivity extends Activity {
 		spinner.setSelection(defaultChoice);
 
 		TimePicker timePick2 = (TimePicker) findViewById(R.id.timePicker2);
-		initTimepicker(timePick2, VindsidenAppWidgetService.config.getStartTime());
+		initTimepicker(timePick2, WindWidgetConfig.getStartTime(this));
 
 		TimePicker timePick3 = (TimePicker) findViewById(R.id.timePicker3);
-		initTimepicker(timePick3, VindsidenAppWidgetService.config.getEndTime());
+		initTimepicker(timePick3, WindWidgetConfig.getEndTime(this));
 
 		spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
 			@Override
@@ -112,7 +102,8 @@ public class VindsidenActivity extends Activity {
 						freq = 5;
 					}
 					; // paranoia robustness
-					VindsidenAppWidgetService.config.setFrequenceIntervalInMinutes(freq);
+					WindWidgetConfig.setFrequenceIntervalInMinutes(VindsidenActivity.this, freq);
+					
 				}
 			};
 
@@ -127,7 +118,7 @@ public class VindsidenActivity extends Activity {
 				Time t = new Time();
 				t.hour = hourOfDay;
 				t.minute = minute;
-				VindsidenAppWidgetService.config.setStartTime(t);
+				WindWidgetConfig.setStartTime(VindsidenActivity.this, t);
 			}
 		});
 		timePick3.setOnTimeChangedListener(new OnTimeChangedListener() {
@@ -136,7 +127,7 @@ public class VindsidenActivity extends Activity {
 				Time t = new Time();
 				t.hour = hourOfDay;
 				t.minute = minute;
-				VindsidenAppWidgetService.config.setEndTime(t);
+				WindWidgetConfig.setEndTime(VindsidenActivity.this, t);
 			}
 		});
 
