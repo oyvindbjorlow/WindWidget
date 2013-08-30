@@ -21,7 +21,7 @@ import android.widget.TimePicker.OnTimeChangedListener;
 public class VindsidenActivity extends Activity {
 
 	int appWidgetId;
-	
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -34,29 +34,29 @@ public class VindsidenActivity extends Activity {
 		String customMessage = intent.getStringExtra("MESSAGE");
 
 		appWidgetId = intent.getIntExtra(EXTRA_APPWIDGET_ID, INVALID_APPWIDGET_ID);
-	
-		int widgetStationID = WindWidgetConfig.getWindStationId(this,appWidgetId); 
-		
+
+		int widgetStationID = WindWidgetConfig.getWindStationId(this, appWidgetId);
+
 		Spinner stationIdSpinner = (Spinner) findViewById(R.id.spinner2);
 		// TODO some more robustness here would be nice I suppose (?)
-		//stationIdSpinner.setSelection(VindsidenAppWidgetService.config.getStationID());
+		// stationIdSpinner.setSelection(VindsidenAppWidgetService.config.getStationID());
 		// use this is preferences bugs:
-		//widgetStationID = VindsidenAppWidgetService.config.getStationID());
+		// widgetStationID = VindsidenAppWidgetService.config.getStationID());
 		stationIdSpinner.setSelection(widgetStationID);
 		stationIdSpinner.setOnItemSelectedListener(new OnItemSelectedListener() {
 			@Override
 			public void onItemSelected(android.widget.AdapterView<?> parent, android.view.View view, int position, long id) {
 				// TODO Øyvind: Noted som stackoverflow people checked for position > (that is, not >= ) 0 ...
-				// not certain if the Spinner class might be bug prone			
-				WindWidgetConfig.setWindStationId(VindsidenActivity.this, appWidgetId,position);
-				
+				// not certain if the Spinner class might be bug prone
+				WindWidgetConfig.setWindStationId(VindsidenActivity.this, appWidgetId, position);
+
 			};
 
 			public void onNothingSelected(android.widget.AdapterView<?> arg0) {
 				// TODO (?)
 			};
 		});
-		
+
 		String message = customMessage == null ? "WindWidget oppsett" : customMessage;
 		TextView tv = (TextView) findViewById(R.id.windwidget_view);
 		tv.setText(message);
@@ -103,7 +103,7 @@ public class VindsidenActivity extends Activity {
 					}
 					; // paranoia robustness
 					WindWidgetConfig.setFrequenceIntervalInMinutes(VindsidenActivity.this, freq);
-					
+
 				}
 			};
 

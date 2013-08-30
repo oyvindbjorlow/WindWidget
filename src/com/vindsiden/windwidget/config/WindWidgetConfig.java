@@ -4,8 +4,17 @@ package com.vindsiden.windwidget.config;
 import android.content.ContextWrapper;
 import android.content.SharedPreferences;
 import android.text.format.Time;
-
+/*
+ * Config should genreally be implemented as an instantiable object,
+ * yet stateless widgets gave me all sorts of grief with this approach, so an implementation is
+ * with static methods and Preference files were chosen.
+ */
 public class WindWidgetConfig {
+	
+	// Vindsiden.no - URL for retrieving the last XML weather measurement at the specified station (specified by id=X).
+	private static final String VINDSIDEN_URL_PREFIX = "http://www.vindsiden.no/xml.aspx?id=";// "http://www.vindsiden.no/xml.aspx?id=1&last=1";
+	private static final String VINDSIDEN_URL_POSTFIX = "&last=1";
+
 
 	private static String PREFERENCES_FILE_PREFIX = "WindWidgetPreferences";
 	private static String PREF_STATIONID_KEY = "STATION_ID";
@@ -37,6 +46,15 @@ public class WindWidgetConfig {
 		DEFAULT_END_TIME = t2;
 	}
 
+	
+	public static String getVindsidenUrlPrefix() {
+			return VINDSIDEN_URL_PREFIX;
+	}
+	
+	public static String getVindsidenUrlPostfix() {
+		return VINDSIDEN_URL_POSTFIX;
+	}
+	
 	public static void setWindStationId(ContextWrapper c, int appWidgetId, int windStationId) {
 		SharedPreferences pref = c.getSharedPreferences(WindWidgetConfig.PREFERENCES_FILE_PREFIX + appWidgetId, 0);
 		SharedPreferences.Editor editor = pref.edit();

@@ -33,22 +33,13 @@ import android.widget.RemoteViews;
  * 
  */
 public class VindsidenAppWidgetService extends IntentService {
-	// Vindsiden.no - URL for retrieving the last XML weather measurement at the specified station (specified by id=X).
-	private static final String URL_PREFIX = "http://www.vindsiden.no/xml.aspx?id=";// "http://www.vindsiden.no/xml.aspx?id=1&last=1";
-	private static final String URL_POSTFIX = "&last=1";
-
 	private static final String PACKAGE_NAME = VindsidenAppWidgetService.class.getPackage().getName();
 	private static final String NEXT_SCHEDULE_URI_POSTFIX = "/next_schedule";
 	private static final String WIDGET_URI_PREFIX = "/widget_id/";
 
-	private static final Measurement PHONY_MEASUREMENT = new Measurement("", "", "?", "-999"); // For robustness if XML
-																																															// doesn't include any
-																																															// Measurements we can
-																																															// read. -999 triggers "?"
-																																															// as direction
-
-	static int buckCounter = 0;
-
+	// robustness: if XML doesn't include any Measurements we can provide this pohny measurement. -999 triggers "?" as
+	// direction
+	private static final Measurement PHONY_MEASUREMENT = new Measurement("", "", "?", "-999");
 	private static final String tag = AppWidgetProvider.class.getName(); // getSimpleName());
 
 	// alternatives for more data:
@@ -107,9 +98,8 @@ public class VindsidenAppWidgetService extends IntentService {
 		// TODO also, I assume the real frequence here is (FREQ+processing time for downloading and showing 1 measurement)
 		// but that's acceptable for now.
 		Time nextUpdateTime = new Time();
-		Log.d(tag,"scheduleNextUpdate called at approx: "+System.currentTimeMillis());
-		nextUpdateTime.set(System.currentTimeMillis()
-				+ WindWidgetConfig.getFrequenceIntervalInMicroseconds(this));
+		Log.d(tag, "scheduleNextUpdate called at approx: " + System.currentTimeMillis());
+		nextUpdateTime.set(System.currentTimeMillis() + WindWidgetConfig.getFrequenceIntervalInMicroseconds(this));
 		long nextUpdate = nextUpdateTime.toMillis(false);
 
 		Time endTimeToday = new Time();
@@ -129,15 +119,15 @@ public class VindsidenAppWidgetService extends IntentService {
 
 			long oneDayInMils = (1 * 24 * 60 * 60 * 1000); // add one days worth of miliseconds. (24 hours 60 minutes 60
 																											// seconds)
-			//getSharedPreferences("hei",0);
-			
+			// getSharedPreferences("hei",0);
+
 			nextUpdate = startTimeToday.toMillis(false) + oneDayInMils;
 		}
 
 		AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
 		// TODO: check: RTC could specifiy "only update a non-sleeping device?"
 		alarmManager.set(AlarmManager.RTC, nextUpdate, updateMeasurementPendingIntent);
-		Log.d(tag,"scheduleNextUpdate set the alarm for: "+nextUpdate);
+		Log.d(tag, "scheduleNextUpdate set the alarm for: " + nextUpdate);
 		// fra doc: If there is already an alarm scheduled for the same IntentSender, it will first be canceled.
 	}
 
@@ -149,13 +139,13 @@ public class VindsidenAppWidgetService extends IntentService {
 		ComponentName appWidgetProvider = new ComponentName(this, VindsidenAppWidgetProvider.class);
 		int[] appWidgetIds = appWidgetManager.getAppWidgetIds(appWidgetProvider);
 		int N = appWidgetIds.length;
-		
+
 		StringBuffer idsToUpdate = new StringBuffer();
 		for (int oneId : appWidgetIds) {
-			idsToUpdate.append(" "+oneId);
-		}				
-		Log.d(tag, "updateAllAppWidgets called for set: "+idsToUpdate);
-		
+			idsToUpdate.append(" " + oneId);
+		}
+		Log.d(tag, "updateAllAppWidgets called for set: " + idsToUpdate);
+
 		for (int i = 0; i < N; i++) {
 			int appWidgetId = appWidgetIds[i];
 			updateOneAppWidget(appWidgetManager, appWidgetId);
@@ -167,58 +157,55 @@ public class VindsidenAppWidgetService extends IntentService {
 	 * handling for its buttons.
 	 */
 	private void updateOneAppWidget(AppWidgetManager appWidgetManager, int appWidgetId) {
-		Log.d(tag, "updateOneAppWidgets called for id: "+appWidgetId);
+		Log.d(tag, "updateOneAppWidgets called for id: " + appWidgetId);
 		RemoteViews views = new RemoteViews(PACKAGE_NAME, R.layout.app_widget_layout);
 		views.setTextViewText(R.id.passcode_view, "Beskrivelse - txtvarsel?");
-		
+
 		int widgetStationID = WindWidgetConfig.getWindStationId(this, appWidgetId);
-		
+
 		List<Measurement> measurements;
 		try {
 			String urlString = 
-					URL_PREFIX + 
+					WindWidgetConfig.getVindsidenUrlPrefix() + 
 					widgetStationID +
-					URL_POSTFIX;
+					WindWidgetConfig.getVindsidenUrlPostfix();
 			Log.d(tag, urlString);
 			measurements = (new VindsidenWebXmlReader()).loadXmlFromNetwork(urlString);
-		} 
-		catch (IOException e) { 
-			throw new RuntimeException (getResources().getString(R.string.connection_error)); 
+		} catch (IOException e) {
+			throw new RuntimeException(getResources().getString(R.string.connection_error));
+		} catch (XmlPullParserException e) {
+			throw new RuntimeException(getResources().getString(R.string.xml_error));
+		} finally { // TODO : any necessary cleanup.
 		}
-		catch (XmlPullParserException e) { 
-			throw new RuntimeException ( getResources().getString(R.string.xml_error));
-		}		
-		finally { // TODO : any necessary cleanup. 
-		} 		
-		
+
 		// assume the most recent data is read first from the XML - it probably is, but there's possibility for error here.
 		Measurement mostRecentMeasurement = measurements.get(0);
-		// add a measure of tolerance (for the case where XML exists, but has readable measurements) 
-		if (mostRecentMeasurement == null) { 
-			mostRecentMeasurement = PHONY_MEASUREMENT; // for robustness, make sure we always have some data in a Measurement object here.
+		// add a measure of tolerance (for the case where XML exists, but has readable measurements)
+		if (mostRecentMeasurement == null) {
+			mostRecentMeasurement = PHONY_MEASUREMENT; // for robustness, make sure we always have some data in a Measurement
+																									// object here.
 		}
 		// sett en veldig enkel knapp gfx (char basert pt) for å indikere vindstyrke og retning
 		StringBuffer windText = new StringBuffer("");
 		windText.append(PresentationHelper.getWindStrengthString(mostRecentMeasurement.getWindAvg()));
-		windText.append(//"\n"
-				""+PresentationHelper.getWindDirectionString(mostRecentMeasurement.getDirectionAvg()));
-					
+		windText.append(// "\n"
+				"" + PresentationHelper.getWindDirectionString(mostRecentMeasurement.getDirectionAvg()));
+
 		Time t = new Time();
 		t.set(System.currentTimeMillis());
-		windText.append("\n"+
-				//t.monthDay+"." + t.month+" "+
-				//t.hour+""+ 
-				t.minute+
-				"@"+mostRecentMeasurement.getStationID());
-			
+		windText.append("\n" +
+		// t.monthDay+"." + t.month+" "+
+		// t.hour+""+
+				t.minute + "@" + mostRecentMeasurement.getStationID());
+
 		views.setTextViewText(R.id.widgetButton, windText);
-		
+
 		// debug: arrow:
-		//views.setTextViewText(R.id.widgetButton, windText);
-		//views.setImageViewResource(R.id.widgetButton, R.drawable.icon);
-		
+		// views.setTextViewText(R.id.widgetButton, windText);
+		// views.setImageViewResource(R.id.widgetButton, R.drawable.icon);
+
 		setProcessWidgetClickIntent(views, appWidgetId, "aMessage");
-	    
+
 		appWidgetManager.updateAppWidget(appWidgetId, views);
 	}
 
