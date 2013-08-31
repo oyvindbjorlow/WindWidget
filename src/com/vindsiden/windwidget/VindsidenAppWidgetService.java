@@ -119,7 +119,6 @@ public class VindsidenAppWidgetService extends IntentService {
 
 			long oneDayInMils = (1 * 24 * 60 * 60 * 1000); // add one days worth of miliseconds. (24 hours 60 minutes 60
 																											// seconds)
-			// getSharedPreferences("hei",0);
 
 			nextUpdate = startTimeToday.toMillis(false) + oneDayInMils;
 		}
@@ -165,10 +164,8 @@ public class VindsidenAppWidgetService extends IntentService {
 
 		List<Measurement> measurements;
 		try {
-			String urlString = 
-					WindWidgetConfig.getVindsidenUrlPrefix() + 
-					widgetStationID +
-					WindWidgetConfig.getVindsidenUrlPostfix();
+			String urlString = WindWidgetConfig.getVindsidenUrlPrefix() + widgetStationID
+					+ WindWidgetConfig.getVindsidenUrlPostfix();
 			Log.d(tag, urlString);
 			measurements = (new VindsidenWebXmlReader()).loadXmlFromNetwork(urlString);
 		} catch (IOException e) {
@@ -178,13 +175,22 @@ public class VindsidenAppWidgetService extends IntentService {
 		} finally { // TODO : any necessary cleanup.
 		}
 
-		// assume the most recent data is read first from the XML - it probably is, but there's possibility for error here.
-		Measurement mostRecentMeasurement = measurements.get(0);
-		// add a measure of tolerance (for the case where XML exists, but has readable measurements)
-		if (mostRecentMeasurement == null) {
-			mostRecentMeasurement = PHONY_MEASUREMENT; // for robustness, make sure we always have some data in a Measurement
-																									// object here.
+		// add a measure of tolerance for the following cases:
+		// 1: no measurements were returned (network or XML or parser error or somesuch)
+		// 2: where XML exists, but has readable measurements)
+		// || operator should avoid any null pointer exceptions for case 2: (2nd operand only evaluted if measurements !=
+		// null)
+		// (we had problems with the alarm/scheduler seemingly dying if network had been turned off for a while,
+		// a theory is it was caused by a nullpointer exception that could happen here in the old code)
+		Measurement mostRecentMeasurement;
+		if ((measurements == null) || (measurements.get(0) == null)) {
+			// make sure we always have some data in a Measurement object here.
+			mostRecentMeasurement = PHONY_MEASUREMENT;
+		} else {
+			// assume the most recent data is read first from the XML - it probably is, but there's possibility for error			
+			mostRecentMeasurement = measurements.get(0);
 		}
+
 		// sett en veldig enkel knapp gfx (char basert pt) for å indikere vindstyrke og retning
 		StringBuffer windText = new StringBuffer("");
 		windText.append(PresentationHelper.getWindStrengthString(mostRecentMeasurement.getWindAvg()));
