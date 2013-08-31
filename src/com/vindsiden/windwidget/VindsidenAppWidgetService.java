@@ -162,16 +162,22 @@ public class VindsidenAppWidgetService extends IntentService {
 
 		int widgetStationID = WindWidgetConfig.getWindStationId(this, appWidgetId);
 
-		List<Measurement> measurements;
+		List<Measurement> measurements = null;
+
 		try {
 			String urlString = WindWidgetConfig.getVindsidenUrlPrefix() + widgetStationID
 					+ WindWidgetConfig.getVindsidenUrlPostfix();
 			Log.d(tag, urlString);
 			measurements = (new VindsidenWebXmlReader()).loadXmlFromNetwork(urlString);
 		} catch (IOException e) {
-			throw new RuntimeException(getResources().getString(R.string.connection_error));
+			Log.d(tag, "An IO exception occured. Stack follows: ");
+			Log.d(tag, e.getStackTrace().toString());
+			// not certain how robust throwing a runtime exception is, might break stuff with recurrence etc!
+			// throw new RuntimeException(getResources().getString(R.string.connection_error));
 		} catch (XmlPullParserException e) {
-			throw new RuntimeException(getResources().getString(R.string.xml_error));
+			Log.d(tag, "An XmlPullParserException occured. Stack follows: ");
+			Log.d(tag, e.getStackTrace().toString());
+			// throw new RuntimeException(getResources().getString(R.string.xml_error));
 		} finally { // TODO : any necessary cleanup.
 		}
 
@@ -187,22 +193,22 @@ public class VindsidenAppWidgetService extends IntentService {
 			// make sure we always have some data in a Measurement object here.
 			mostRecentMeasurement = PHONY_MEASUREMENT;
 		} else {
-			// assume the most recent data is read first from the XML - it probably is, but there's possibility for error			
+			// assume the most recent data is read first from the XML - it probably is, but there's possibility for error
 			mostRecentMeasurement = measurements.get(0);
 		}
 
 		// sett en veldig enkel knapp gfx (char basert pt) for å indikere vindstyrke og retning
 		StringBuffer windText = new StringBuffer("");
 		windText.append(PresentationHelper.getWindStrengthString(mostRecentMeasurement.getWindAvg()));
-		windText.append(// "\n"
-				"" + PresentationHelper.getWindDirectionString(mostRecentMeasurement.getDirectionAvg()));
+		windText.append("\n" + PresentationHelper.getWindDirectionString(mostRecentMeasurement.getDirectionAvg()));
 
 		Time t = new Time();
 		t.set(System.currentTimeMillis());
 		windText.append("\n" +
 		// t.monthDay+"." + t.month+" "+
 		// t.hour+""+
-				t.minute + "@" + mostRecentMeasurement.getStationID());
+		// t.minute +
+				"@" + mostRecentMeasurement.getStationID());
 
 		views.setTextViewText(R.id.widgetButton, windText);
 
