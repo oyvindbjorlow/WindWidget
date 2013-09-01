@@ -11,10 +11,17 @@
     <Button
         android:id="@+id/widgetButton"
         style="?android:attr/buttonStyleSmall"
-        android:layout_width="fill_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:text="@string/dummyText" />
+
+    <ImageButton
+        android:id="@+id/imageButton1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:src="@drawable/zero" />
 
     <TextView
         android:id="@+id/passcode_view"

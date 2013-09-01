@@ -20,9 +20,13 @@ import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.net.Uri;
 import android.text.format.Time;
 import android.util.Log;
+import android.widget.ImageButton;
 import android.widget.RemoteViews;
 
 /**
@@ -212,10 +216,38 @@ public class VindsidenAppWidgetService extends IntentService {
 
 		views.setTextViewText(R.id.widgetButton, windText);
 
-		// debug: arrow:
-		// views.setTextViewText(R.id.widgetButton, windText);
-		// views.setImageViewResource(R.id.widgetButton, R.drawable.icon);
+		
+		// very simply gfx support: First, choose a predrawn arrow based on strength 
+		int arrowPng = R.drawable.zero;
+		
+		Float windStrFloat = PresentationHelper.getWindStrength(mostRecentMeasurement.getWindAvg());
+		if (windStrFloat == Float.NaN) {}		 // keep 0 as the image.
+		if (windStrFloat > 0) 	{arrowPng = R.drawable.arrow;}				
+		if (windStrFloat > 2.5) 	{arrowPng = R.drawable.arrow2;}		
+		if (windStrFloat > 5) 	{arrowPng = R.drawable.arrow3;}		
+		if (windStrFloat > 7.5) 	{arrowPng = R.drawable.arrow4;}
+		if (windStrFloat > 10) 	{arrowPng = R.drawable.arrow5;}  // this gfx is the "max wind" gfx of this simple version
 
+		// test: draw a pre-set graphical arrow, then rotate it depending on measured direction:
+		if (PresentationHelper.isValidDirection(mostRecentMeasurement.getDirectionAvg())) {
+			Bitmap bmpOriginal = BitmapFactory.decodeResource(this.getResources(), arrowPng);
+			Bitmap bmResult = Bitmap.createBitmap(bmpOriginal.getWidth(), bmpOriginal.getHeight(), Bitmap.Config.ARGB_8888);
+			Canvas tempCanvas = new Canvas(bmResult); 
+			tempCanvas.rotate(PresentationHelper.getDegreesRotation(
+					mostRecentMeasurement.getDirectionAvg()), bmpOriginal.getWidth()/2, bmpOriginal.getHeight()/2);
+			tempCanvas.drawBitmap(bmpOriginal, 0, 0, null);
+			//mImageView.setImageBitmap(bmResult);
+			views.setBitmap(R.id.imageButton1, "setImageBitmap", bmResult);			
+		}
+		else
+		{
+			// for now, just draw a logo if no valid direction
+			views.setBitmap(R.id.imageButton1, "setImageBitmap", 
+					BitmapFactory.decodeResource(getResources(), R.drawable.icon));
+		}
+		
+	
+		
 		setProcessWidgetClickIntent(views, appWidgetId, "aMessage");
 
 		appWidgetManager.updateAppWidget(appWidgetId, views);
