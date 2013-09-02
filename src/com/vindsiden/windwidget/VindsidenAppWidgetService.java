@@ -23,6 +23,8 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
 import android.net.Uri;
 import android.text.format.Time;
 import android.util.Log;
@@ -216,38 +218,52 @@ public class VindsidenAppWidgetService extends IntentService {
 
 		views.setTextViewText(R.id.widgetButton, windText);
 
-		
-		// very simply gfx support: First, choose a predrawn arrow based on strength 
-		int arrowPng = R.drawable.zero;
-		
+		// very simply gfx support: First, choose a predrawn arrow based on strength
+		// @formatter:off
+		int arrowPng = R.drawable.zero;		
 		Float windStrFloat = PresentationHelper.getWindStrength(mostRecentMeasurement.getWindAvg());
 		if (windStrFloat == Float.NaN) {}		 // keep 0 as the image.
-		if (windStrFloat > 0) 	{arrowPng = R.drawable.arrow;}				
-		if (windStrFloat > 2.5) 	{arrowPng = R.drawable.arrow2;}		
-		if (windStrFloat > 5) 	{arrowPng = R.drawable.arrow3;}		
-		if (windStrFloat > 7.5) 	{arrowPng = R.drawable.arrow4;}
-		if (windStrFloat > 10) 	{arrowPng = R.drawable.arrow5;}  // this gfx is the "max wind" gfx of this simple version
+		if (windStrFloat > 0) 				{arrowPng = R.drawable.arrow;}				
+		if (windStrFloat >= 2.5)	 		{arrowPng = R.drawable.arrow2;}		
+		if (windStrFloat >= 5) 				{arrowPng = R.drawable.arrow5;}		
+		if (windStrFloat >= 7.5)	 		{arrowPng = R.drawable.arrow7;}
+		if (windStrFloat >= 10) 			{arrowPng = R.drawable.arrow10;}  
+		if (windStrFloat >= 12.5) 		{arrowPng = R.drawable.arrow12;}				
+		if (windStrFloat >= 15) 			{arrowPng = R.drawable.arrow15;}		
+		if (windStrFloat >= 17.5) 		{arrowPng = R.drawable.arrow17;}		
+		if (windStrFloat >= 20) 			{arrowPng = R.drawable.arrow20;} // this gfx is the "max wind" gfx of this simple version
+		// @formatter:on
 
-		// test: draw a pre-set graphical arrow, then rotate it depending on measured direction:
+		// rotate the predawn arrow depending on measured direction:
 		if (PresentationHelper.isValidDirection(mostRecentMeasurement.getDirectionAvg())) {
 			Bitmap bmpOriginal = BitmapFactory.decodeResource(this.getResources(), arrowPng);
 			Bitmap bmResult = Bitmap.createBitmap(bmpOriginal.getWidth(), bmpOriginal.getHeight(), Bitmap.Config.ARGB_8888);
-			Canvas tempCanvas = new Canvas(bmResult); 
-			tempCanvas.rotate(PresentationHelper.getDegreesRotation(
-					mostRecentMeasurement.getDirectionAvg()), bmpOriginal.getWidth()/2, bmpOriginal.getHeight()/2);
-			tempCanvas.drawBitmap(bmpOriginal, 0, 0, null);
-			//mImageView.setImageBitmap(bmResult);
-			views.setBitmap(R.id.imageButton1, "setImageBitmap", bmResult);			
-		}
-		else
-		{
+			Canvas tempCanvas = new Canvas(bmResult);
+			tempCanvas.rotate(PresentationHelper.getDirectionInt(mostRecentMeasurement.getDirectionAvg()),
+					bmpOriginal.getWidth() / 2, bmpOriginal.getHeight() / 2);
+			tempCanvas.drawBitmap(bmpOriginal, 0, 0, null);		
+			
+			Canvas tempCanvas2 = new Canvas(bmResult);
+			Paint paint = new Paint();
+      paint.setColor(Color.WHITE);
+      paint.setTextSize(20f);
+      paint.setAntiAlias(true);
+      paint.setFakeBoldText(true);
+      paint.setShadowLayer(6f, 0, 0, Color.BLACK);
+      paint.setStyle(Paint.Style.FILL);
+      paint.setTextAlign(Paint.Align.LEFT);
+      tempCanvas2.drawText(
+					PresentationHelper.getWindStrengthString(mostRecentMeasurement.getWindAvg())+
+					"ms @"+mostRecentMeasurement.getStationID()
+					, 0, 20, paint); 
+			
+			views.setBitmap(R.id.imageButton1, "setImageBitmap", bmResult);
+		} else {
 			// for now, just draw a logo if no valid direction
-			views.setBitmap(R.id.imageButton1, "setImageBitmap", 
+			views.setBitmap(R.id.imageButton1, "setImageBitmap",
 					BitmapFactory.decodeResource(getResources(), R.drawable.icon));
 		}
-		
-	
-		
+
 		setProcessWidgetClickIntent(views, appWidgetId, "aMessage");
 
 		appWidgetManager.updateAppWidget(appWidgetId, views);
@@ -263,6 +279,8 @@ public class VindsidenAppWidgetService extends IntentService {
 		intent.putExtra(EXTRA_APPWIDGET_ID, appWidgetId);
 		PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
 		views.setOnClickPendingIntent(R.id.widgetButton, pendingIntent);
+		views.setOnClickPendingIntent(R.id.imageButton1, pendingIntent);// hard'n dirty assuming we can set the same event
+																																		// for the 2 buttons.
 	}
 
 }
