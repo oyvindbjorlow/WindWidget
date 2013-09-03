@@ -37,7 +37,7 @@ public class PresentationHelper {
 		} catch (NumberFormatException e) {
 			degreeInt = Integer.valueOf(-999);
 		}
-		return ((degreeInt > -180) && (degreeInt < 360)); // check these limits with cg/Øystein, I suppose
+		return ((degreeInt > -180) && (degreeInt < 360*1.5)); // check these limits with cg/Øystein, I suppose. i''ve seen values around 380 and -100.
 	}
 
 	public static int getWindStrengthDrawable(float windStrength ) {

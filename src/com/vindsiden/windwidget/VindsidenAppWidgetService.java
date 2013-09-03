@@ -11,6 +11,7 @@ import org.xmlpull.v1.XmlPullParserException;
 import com.vindsiden.windwidget.config.WindWidgetConfig;
 import com.vindsiden.windwidget.model.Measurement;
 import com.vindsiden.windwidget.model.PresentationHelper;
+import com.vindsiden.windwidget.model.WindWidgetStations;
 
 import android.app.AlarmManager;
 import android.app.IntentService;
@@ -90,8 +91,6 @@ public class VindsidenAppWidgetService extends IntentService {
 	private void scheduleNextUpdate() {
 		Intent updateMeasurementIntent = new Intent(this, this.getClass());
 		// A content URI for this Intent may be unnecessary. (comment from the example from Programmer Bruce)
-		// TODO should this be linked to an appwidget ID as well, in case we have different widgets with different schedules
-		// handled by the same service?
 		updateMeasurementIntent.setData(Uri.parse("content://" + PACKAGE_NAME + NEXT_SCHEDULE_URI_POSTFIX));
 		PendingIntent updateMeasurementPendingIntent = PendingIntent.getService(this, 0, updateMeasurementIntent,
 				PendingIntent.FLAG_UPDATE_CURRENT);
@@ -122,17 +121,18 @@ public class VindsidenAppWidgetService extends IntentService {
 			startTimeToday.hour = configStartTime.hour;
 			startTimeToday.minute = configStartTime.minute;
 
-			long oneDayInMils = (1 * 24 * 60 * 60 * 1000); // add one days worth of miliseconds. (24 hours 60 minutes 60
-																											// seconds)
+			// add one days worth of miliseconds. (24 hours 60 minutes 60seconds)
+			long oneDayInMils = (1 * 24 * 60 * 60 * 1000);
 
 			nextUpdate = startTimeToday.toMillis(false) + oneDayInMils;
 		}
 
 		AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-		// TODO: check: RTC could specifiy "only update a non-sleeping device?"
+		// RTC does not waken up the device, but the intent is triggered once the device reawakens from another trigger
+		// fra doc: If there is already an alarm scheduled for the same IntentSender, it will first be canceled.
 		alarmManager.set(AlarmManager.RTC, nextUpdate, updateMeasurementPendingIntent);
 		Log.d(tag, "scheduleNextUpdate set the alarm for: " + nextUpdate);
-		// fra doc: If there is already an alarm scheduled for the same IntentSender, it will first be canceled.
+
 	}
 
 	/**
@@ -163,7 +163,7 @@ public class VindsidenAppWidgetService extends IntentService {
 	private void updateOneAppWidget(AppWidgetManager appWidgetManager, int appWidgetId) {
 		Log.d(tag, "updateOneAppWidgets called for id: " + appWidgetId);
 		RemoteViews views = new RemoteViews(PACKAGE_NAME, R.layout.app_widget_layout);
-		views.setTextViewText(R.id.passcode_view, "Beskrivelse - txtvarsel?");
+		views.setTextViewText(R.id.header_view, "Beskrivelse - txtvarsel?");
 
 		int widgetStationID = WindWidgetConfig.getWindStationId(this, appWidgetId);
 
@@ -183,7 +183,6 @@ public class VindsidenAppWidgetService extends IntentService {
 			Log.d(tag, "An XmlPullParserException occured. Stack follows: ");
 			Log.d(tag, e.getStackTrace().toString());
 			// throw new RuntimeException(getResources().getString(R.string.xml_error));
-		} finally { // TODO : any necessary cleanup.
 		}
 
 		// add a measure of tolerance for the following cases:
@@ -193,63 +192,72 @@ public class VindsidenAppWidgetService extends IntentService {
 		// null)
 		// (we had problems with the alarm/scheduler seemingly dying if network had been turned off for a while,
 		// a theory is it was caused by a nullpointer exception that could happen here in the old code)
+		// size () <1 check added, as we've seen measurements != null yet get(0) throwing runtime exc. runtime.
 		Measurement mostRecentMeasurement;
-		if ((measurements == null) || (measurements.get(0) == null)) {
+		if ((measurements == null) || (measurements.size() < 1) || (measurements.get(0) == null)) {
 			// make sure we always have some data in a Measurement object here.
 			mostRecentMeasurement = PHONY_MEASUREMENT;
+			// not sure we should use this PHONY_MEASUREMENT anymore. instead, we could gray out the
+			// widget(s) where no valid measurement was found
+			// Set a different background color to signify "no update, due to no connection, invalid measurement or somesuch"
+			views.setInt(R.id.imageButton1, "setBackgroundColor",  0x00999999); //0x00000000); this was all black, no opaque
+			
+			
 		} else {
+			views.setInt(R.id.imageButton1, "setBackgroundColor", 0x00FFFFFF);
 			// assume the most recent data is read first from the XML - it probably is, but there's possibility for error
 			mostRecentMeasurement = measurements.get(0);
-		}
 
-		// sett en veldig enkel knapp gfx (char basert pt) for å indikere vindstyrke og retning
-		StringBuffer windText = new StringBuffer("");
-		windText.append(PresentationHelper.getWindStrengthString(mostRecentMeasurement.getWindAvg()));
-		windText.append("\n" + PresentationHelper.getWindDirectionString(mostRecentMeasurement.getDirectionAvg()));
+			/*
+			 * // sett en veldig enkel knapp gfx (char basert pt) for å indikere vindstyrke og retning StringBuffer windText =
+			 * new StringBuffer("");
+			 * windText.append(PresentationHelper.getWindStrengthString(mostRecentMeasurement.getWindAvg()));
+			 * windText.append("\n" + PresentationHelper.getWindDirectionString(mostRecentMeasurement.getDirectionAvg()));
+			 * 
+			 * Time t = new Time(); t.set(System.currentTimeMillis()); windText.append("\n" + // t.monthDay+"." + t.month+" "+
+			 * // t.hour+""+ // t.minute + "@" + mostRecentMeasurement.getStationID());
+			 * 
+			 * views.setTextViewText(R.id.widgetButton, windText);
+			 */
 
-		Time t = new Time();
-		t.set(System.currentTimeMillis());
-		windText.append("\n" +
-		// t.monthDay+"." + t.month+" "+
-		// t.hour+""+
-		// t.minute +
-				"@" + mostRecentMeasurement.getStationID());
+			// Very simply gfx support: First, choose a predrawn arrow based on strength
+			int arrowPng = PresentationHelper.getWindStrengthDrawable(PresentationHelper
+					.getWindStrength(mostRecentMeasurement.getWindAvg()));
 
-		views.setTextViewText(R.id.widgetButton, windText);
+			// rotate the predawn arrow depending on measured direction:
+			if (PresentationHelper.isValidDirection(mostRecentMeasurement.getDirectionAvg())) {
+				Bitmap bmpOriginal = BitmapFactory.decodeResource(this.getResources(), arrowPng);
+				Bitmap bmResult = Bitmap.createBitmap(bmpOriginal.getWidth(), bmpOriginal.getHeight() + 40,
+						Bitmap.Config.ARGB_8888);
+				Canvas tempCanvas = new Canvas(bmResult);
+				tempCanvas.rotate(PresentationHelper.getDirectionInt(mostRecentMeasurement.getDirectionAvg()),
+						bmpOriginal.getWidth() / 2, bmpOriginal.getHeight() / 2); // focal point is center of orig image (not+40
+																																			// height)
+				tempCanvas.drawBitmap(bmpOriginal, 0, 0, null);
 
-		// very simply gfx support: First, choose a predrawn arrow based on strength
-		int arrowPng = PresentationHelper.getWindStrengthDrawable(
-				PresentationHelper.getWindStrength(mostRecentMeasurement.getWindAvg()));
-				
-		// rotate the predawn arrow depending on measured direction:
-		if (PresentationHelper.isValidDirection(mostRecentMeasurement.getDirectionAvg())) {
-			Bitmap bmpOriginal = BitmapFactory.decodeResource(this.getResources(), arrowPng);
-			Bitmap bmResult = Bitmap.createBitmap(bmpOriginal.getWidth(), bmpOriginal.getHeight(), Bitmap.Config.ARGB_8888);
-			Canvas tempCanvas = new Canvas(bmResult);
-			tempCanvas.rotate(PresentationHelper.getDirectionInt(mostRecentMeasurement.getDirectionAvg()),
-					bmpOriginal.getWidth() / 2, bmpOriginal.getHeight() / 2);
-			tempCanvas.drawBitmap(bmpOriginal, 0, 0, null);		
-			
-			Canvas tempCanvas2 = new Canvas(bmResult);
-			Paint paint = new Paint();
-      paint.setColor(Color.WHITE);
-      paint.setTextSize(20f);
-      paint.setAntiAlias(true);
-      paint.setFakeBoldText(true);
-      paint.setShadowLayer(6f, 0, 0, Color.BLACK);
-      paint.setStyle(Paint.Style.FILL);
-      paint.setTextAlign(Paint.Align.LEFT);
-      tempCanvas2.drawText(
-					PresentationHelper.getWindStrengthString(mostRecentMeasurement.getWindAvg())+
-					"ms @"+mostRecentMeasurement.getStationID()
-					, 0, bmpOriginal.getHeight()-20, //20, //used 20 for drawing close to top of button 
-					paint); 
-			
-			views.setBitmap(R.id.imageButton1, "setImageBitmap", bmResult);
-		} else {
-			// for now, just draw a logo if no valid direction
-			views.setBitmap(R.id.imageButton1, "setImageBitmap",
-					BitmapFactory.decodeResource(getResources(), R.drawable.icon));
+				Canvas tempCanvas2 = new Canvas(bmResult); // the other canvas won the bmp was rotated, so we create another.
+				Paint paint = new Paint();
+				paint.setColor(Color.WHITE);
+				paint.setTextSize(20f);
+				paint.setAntiAlias(true);
+				paint.setFakeBoldText(true);
+				paint.setShadowLayer(6f, 0, 0, Color.BLACK);
+				paint.setStyle(Paint.Style.FILL);
+				paint.setTextAlign(Paint.Align.LEFT);
+				tempCanvas2.drawText(PresentationHelper.getWindStrengthString(mostRecentMeasurement.getWindAvg()) + "ms "
+				// +"@"+ mostRecentMeasurement.getStationID()
+						, 0, bmResult.getHeight() - 20, // 20,
+						// used 20 for drawing close to top of button
+						paint);
+				tempCanvas2.drawText(WindWidgetStations.getStationNameForStationId(widgetStationID), 0, bmResult.getHeight(),
+						paint);
+
+				views.setBitmap(R.id.imageButton1, "setImageBitmap", bmResult);
+			} else {
+				// for now, just draw a logo if no valid direction
+				views.setBitmap(R.id.imageButton1, "setImageBitmap",
+						BitmapFactory.decodeResource(getResources(), R.drawable.icon));
+			}
 		}
 
 		setProcessWidgetClickIntent(views, appWidgetId, "aMessage");
@@ -266,9 +274,8 @@ public class VindsidenAppWidgetService extends IntentService {
 		intent.putExtra("ARGUMENT", newMessage); // not really used anymore. a debug option.
 		intent.putExtra(EXTRA_APPWIDGET_ID, appWidgetId);
 		PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-		views.setOnClickPendingIntent(R.id.widgetButton, pendingIntent);
-		views.setOnClickPendingIntent(R.id.imageButton1, pendingIntent);// hard'n dirty assuming we can set the same event
-																																		// for the 2 buttons.
+		// views.setOnClickPendingIntent(R.id.widgetButton, pendingIntent);
+		views.setOnClickPendingIntent(R.id.imageButton1, pendingIntent);
 	}
 
 }

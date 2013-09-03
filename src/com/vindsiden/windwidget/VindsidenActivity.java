@@ -3,13 +3,18 @@ package com.vindsiden.windwidget;
 import static android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID;
 import static android.appwidget.AppWidgetManager.INVALID_APPWIDGET_ID;
 
+import java.util.ArrayList;
+
 import com.vindsiden.windwidget.config.WindWidgetConfig;
+import com.vindsiden.windwidget.model.WindWidgetStation;
+import com.vindsiden.windwidget.model.WindWidgetStations;
 
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.format.Time;
 import android.widget.AdapterView.OnItemSelectedListener;
+import android.widget.ArrayAdapter;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.TimePicker;
@@ -32,28 +37,31 @@ public class VindsidenActivity extends Activity {
 
 		Intent intent = getIntent();
 		String customMessage = intent.getStringExtra("MESSAGE");
-
 		appWidgetId = intent.getIntExtra(EXTRA_APPWIDGET_ID, INVALID_APPWIDGET_ID);
 
-		int widgetStationID = WindWidgetConfig.getWindStationId(this, appWidgetId);
-
+		// StationID SPINNER
 		Spinner stationIdSpinner = (Spinner) findViewById(R.id.spinner2);
-		// TODO some more robustness here would be nice I suppose (?)
-		// stationIdSpinner.setSelection(VindsidenAppWidgetService.config.getStationID());
-		// use this is preferences bugs:
-		// widgetStationID = VindsidenAppWidgetService.config.getStationID());
-		stationIdSpinner.setSelection(widgetStationID);
+		ArrayList<String> spinnerArray = new ArrayList<String>();
+		for (WindWidgetStation w : WindWidgetStations.getStationList()) {
+			spinnerArray.add(w.getStationName());
+		}
+		ArrayAdapter<String> spinnerArrayAdapter = 
+				new ArrayAdapter<String>(this, android.R.layout.simple_spinner_dropdown_item, spinnerArray);
+		stationIdSpinner.setAdapter(spinnerArrayAdapter);
+		
+		stationIdSpinner.setSelection(
+				WindWidgetStations.getIndexForStationID(WindWidgetConfig.getWindStationId(this,appWidgetId)));
+
 		stationIdSpinner.setOnItemSelectedListener(new OnItemSelectedListener() {
 			@Override
 			public void onItemSelected(android.widget.AdapterView<?> parent, android.view.View view, int position, long id) {
 				// TODO Øyvind: Noted som stackoverflow people checked for position > (that is, not >= ) 0 ...
 				// not certain if the Spinner class might be bug prone
-				WindWidgetConfig.setWindStationId(VindsidenActivity.this, appWidgetId, position);
-
+				WindWidgetConfig.setWindStationId(VindsidenActivity.this, appWidgetId,
+						WindWidgetStations.getStationIdForIndex(position));
 			};
 
 			public void onNothingSelected(android.widget.AdapterView<?> arg0) {
-				// TODO (?)
 			};
 		});
 
@@ -61,36 +69,28 @@ public class VindsidenActivity extends Activity {
 		TextView tv = (TextView) findViewById(R.id.windwidget_view);
 		tv.setText(message);
 
-		Spinner spinner = (Spinner) findViewById(R.id.spinner1);
+		
+		// FREQUENCE SPINNER
+		// TODO some robustness here would be nice I suppose - freq values are defined both in XML and hardcoded here
+		Spinner freqSpinner = (Spinner) findViewById(R.id.spinner1);
 		int defaultChoice = 1;
 		int oldFreq = WindWidgetConfig.getFrequenceIntervalInMinutes(this);
-		// TODO some robustness here would be nice I suppose - freq values are defined both in XML and hardcoded here as of
-		// now.
-		if (oldFreq == 5) {
-			defaultChoice = 0;
-		}
-		;
-		if (oldFreq == 15) {
-			defaultChoice = 1;
-		}
-		;
-		if (oldFreq == 30) {
-			defaultChoice = 2;
-		}
-		;
-		if (oldFreq == 60) {
-			defaultChoice = 3;
-		}
-		;
-		spinner.setSelection(defaultChoice);
+		// @formatter:off
+		if (oldFreq == 5) {defaultChoice = 0;};
+		if (oldFreq == 15) {defaultChoice = 1;};
+		if (oldFreq == 30) {defaultChoice = 2;};
+		if (oldFreq == 60) {defaultChoice = 3;};
+		// @formatter:on
+		freqSpinner.setSelection(defaultChoice);
 
+		// TIME PICKERS START/ENDTIMES
 		TimePicker timePick2 = (TimePicker) findViewById(R.id.timePicker2);
 		initTimepicker(timePick2, WindWidgetConfig.getStartTime(this));
 
 		TimePicker timePick3 = (TimePicker) findViewById(R.id.timePicker3);
 		initTimepicker(timePick3, WindWidgetConfig.getEndTime(this));
 
-		spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
+		freqSpinner.setOnItemSelectedListener(new OnItemSelectedListener() {
 			@Override
 			public void onItemSelected(android.widget.AdapterView<?> parent, android.view.View view, int position, long id) {
 				// TODO Øyvind: Noted som stackoverflow people checked for position > (that is, not >= ) 0 ... not certain if
