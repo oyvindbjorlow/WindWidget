@@ -1,5 +1,7 @@
 package com.vindsiden.windwidget.model;
 
+import com.vindsiden.windwidget.R;
+
 /*
  * A simple class with static methods to provide a simple representation
  * of wind direction and strength.
@@ -38,6 +40,23 @@ public class PresentationHelper {
 		return ((degreeInt > -180) && (degreeInt < 360)); // check these limits with cg/Øystein, I suppose
 	}
 
+	public static int getWindStrengthDrawable(float windStrength ) {
+		// @formatter:off
+		int arrowPng = R.drawable.zero;		
+		if (windStrength == Float.NaN) {}		 // keep 0 as the image.
+		if (windStrength > 0) 				{arrowPng = R.drawable.arrow;}				
+		if (windStrength >= 2.5)	 		{arrowPng = R.drawable.arrow2;}		
+		if (windStrength >= 5) 				{arrowPng = R.drawable.arrow5;}		
+		if (windStrength >= 7.5)	 		{arrowPng = R.drawable.arrow7;}
+		if (windStrength >= 10) 			{arrowPng = R.drawable.arrow10;}  
+		if (windStrength >= 12.5) 		{arrowPng = R.drawable.arrow12;}				
+		if (windStrength >= 15) 			{arrowPng = R.drawable.arrow15;}		
+		if (windStrength >= 17.5) 		{arrowPng = R.drawable.arrow17;}		
+		if (windStrength >= 20) 			{arrowPng = R.drawable.arrow20;} // this gfx is the "max wind" gfx of this simple version
+		// @formatter:on
+		return arrowPng;
+	}
+	
 	public static String getWindDirectionString(String directionAvg) {
 		// @formatter:off
 		String directionString = "O";  // signifies no wind

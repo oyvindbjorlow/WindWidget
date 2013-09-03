@@ -28,7 +28,6 @@ import android.graphics.Paint;
 import android.net.Uri;
 import android.text.format.Time;
 import android.util.Log;
-import android.widget.ImageButton;
 import android.widget.RemoteViews;
 
 /**
@@ -219,21 +218,9 @@ public class VindsidenAppWidgetService extends IntentService {
 		views.setTextViewText(R.id.widgetButton, windText);
 
 		// very simply gfx support: First, choose a predrawn arrow based on strength
-		// @formatter:off
-		int arrowPng = R.drawable.zero;		
-		Float windStrFloat = PresentationHelper.getWindStrength(mostRecentMeasurement.getWindAvg());
-		if (windStrFloat == Float.NaN) {}		 // keep 0 as the image.
-		if (windStrFloat > 0) 				{arrowPng = R.drawable.arrow;}				
-		if (windStrFloat >= 2.5)	 		{arrowPng = R.drawable.arrow2;}		
-		if (windStrFloat >= 5) 				{arrowPng = R.drawable.arrow5;}		
-		if (windStrFloat >= 7.5)	 		{arrowPng = R.drawable.arrow7;}
-		if (windStrFloat >= 10) 			{arrowPng = R.drawable.arrow10;}  
-		if (windStrFloat >= 12.5) 		{arrowPng = R.drawable.arrow12;}				
-		if (windStrFloat >= 15) 			{arrowPng = R.drawable.arrow15;}		
-		if (windStrFloat >= 17.5) 		{arrowPng = R.drawable.arrow17;}		
-		if (windStrFloat >= 20) 			{arrowPng = R.drawable.arrow20;} // this gfx is the "max wind" gfx of this simple version
-		// @formatter:on
-
+		int arrowPng = PresentationHelper.getWindStrengthDrawable(
+				PresentationHelper.getWindStrength(mostRecentMeasurement.getWindAvg()));
+				
 		// rotate the predawn arrow depending on measured direction:
 		if (PresentationHelper.isValidDirection(mostRecentMeasurement.getDirectionAvg())) {
 			Bitmap bmpOriginal = BitmapFactory.decodeResource(this.getResources(), arrowPng);
@@ -255,7 +242,8 @@ public class VindsidenAppWidgetService extends IntentService {
       tempCanvas2.drawText(
 					PresentationHelper.getWindStrengthString(mostRecentMeasurement.getWindAvg())+
 					"ms @"+mostRecentMeasurement.getStationID()
-					, 0, 20, paint); 
+					, 0, bmpOriginal.getHeight()-20, //20, //used 20 for drawing close to top of button 
+					paint); 
 			
 			views.setBitmap(R.id.imageButton1, "setImageBitmap", bmResult);
 		} else {
