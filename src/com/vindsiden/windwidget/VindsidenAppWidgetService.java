@@ -24,8 +24,6 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.Paint;
 import android.net.Uri;
 import android.text.format.Time;
 import android.util.Log;
@@ -161,6 +159,9 @@ public class VindsidenAppWidgetService extends IntentService {
 	 * handling for its buttons.
 	 */
 	private void updateOneAppWidget(AppWidgetManager appWidgetManager, int appWidgetId) {
+
+		boolean xmlRetrievalSuccessful = true;
+
 		Log.d(tag, "updateOneAppWidgets called for id: " + appWidgetId);
 		RemoteViews views = new RemoteViews(PACKAGE_NAME, R.layout.app_widget_layout);
 		views.setTextViewText(R.id.header_view, "Beskrivelse - txtvarsel?");
@@ -177,11 +178,13 @@ public class VindsidenAppWidgetService extends IntentService {
 		} catch (IOException e) {
 			Log.d(tag, "An IO exception occured. Stack follows: ");
 			Log.d(tag, e.getStackTrace().toString());
+			xmlRetrievalSuccessful = false;
 			// not certain how robust throwing a runtime exception is, might break stuff with recurrence etc!
 			// throw new RuntimeException(getResources().getString(R.string.connection_error));
 		} catch (XmlPullParserException e) {
 			Log.d(tag, "An XmlPullParserException occured. Stack follows: ");
 			Log.d(tag, e.getStackTrace().toString());
+			xmlRetrievalSuccessful = false;
 			// throw new RuntimeException(getResources().getString(R.string.xml_error));
 		}
 
@@ -197,16 +200,19 @@ public class VindsidenAppWidgetService extends IntentService {
 		if ((measurements == null) || (measurements.size() < 1) || (measurements.get(0) == null)) {
 			// make sure we always have some data in a Measurement object here.
 			mostRecentMeasurement = PHONY_MEASUREMENT;
-			// not sure we should use this PHONY_MEASUREMENT anymore. instead, we could gray out the
-			// widget(s) where no valid measurement was found
-			// Set a different background color to signify "no update, due to no connection, invalid measurement or somesuch"
-			views.setInt(R.id.imageButton1, "setBackgroundColor",  0x00999999); //0x00000000); this was all black, no opaque
-			
-			
 		} else {
-			views.setInt(R.id.imageButton1, "setBackgroundColor", 0x00FFFFFF);
-			// assume the most recent data is read first from the XML - it probably is, but there's possibility for error
+			// assume the most recent data is read first from the XML - it probably is, but there's always possibility for
+			// error
 			mostRecentMeasurement = measurements.get(0);
+		}
+
+		// gray out the widget(s) where no valid measurement was found
+		// Set a different background color to signify "no update, due to no connection, invalid measurement or somesuch"
+		if (xmlRetrievalSuccessful == false) {
+			views.setInt(R.id.imageButton1, "setBackgroundColor", 0xcccccccc); // 0x00000000); this was all black, no opaque
+		}
+		else {
+			views.setInt(R.id.imageButton1, "setBackgroundColor", 0x00FFFFFF); // 0x00FFFFFF should be completely transparent
 
 			/*
 			 * // sett en veldig enkel knapp gfx (char basert pt) for å indikere vindstyrke og retning StringBuffer windText =
@@ -225,9 +231,12 @@ public class VindsidenAppWidgetService extends IntentService {
 					.getWindStrength(mostRecentMeasurement.getWindAvg()));
 
 			// rotate the predawn arrow depending on measured direction:
-			if (PresentationHelper.isValidDirection(mostRecentMeasurement.getDirectionAvg())) {
+			if ((mostRecentMeasurement != PHONY_MEASUREMENT)
+					&& PresentationHelper.isValidDirection(mostRecentMeasurement.getDirectionAvg())) {
 				Bitmap bmpOriginal = BitmapFactory.decodeResource(this.getResources(), arrowPng);
-				Bitmap bmResult = Bitmap.createBitmap(bmpOriginal.getWidth(), bmpOriginal.getHeight() + 40,
+				// 	add 40 pixelsheight for text
+				// add 20 pixelwidth for room for wider text as well.
+				Bitmap bmResult = Bitmap.createBitmap(bmpOriginal.getWidth()+20, bmpOriginal.getHeight() + 40, 
 						Bitmap.Config.ARGB_8888);
 				Canvas tempCanvas = new Canvas(bmResult);
 				tempCanvas.rotate(PresentationHelper.getDirectionInt(mostRecentMeasurement.getDirectionAvg()),
@@ -235,33 +244,28 @@ public class VindsidenAppWidgetService extends IntentService {
 																																			// height)
 				tempCanvas.drawBitmap(bmpOriginal, 0, 0, null);
 
-				Canvas tempCanvas2 = new Canvas(bmResult); // the other canvas won the bmp was rotated, so we create another.
-				Paint paint = new Paint();
-				paint.setColor(Color.WHITE);
-				paint.setTextSize(20f);
-				paint.setAntiAlias(true);
-				paint.setFakeBoldText(true);
-				paint.setShadowLayer(6f, 0, 0, Color.BLACK);
-				paint.setStyle(Paint.Style.FILL);
-				paint.setTextAlign(Paint.Align.LEFT);
-				tempCanvas2.drawText(PresentationHelper.getWindStrengthString(mostRecentMeasurement.getWindAvg()) + "ms "
-				// +"@"+ mostRecentMeasurement.getStationID()
+				Canvas tempCanvas2 = new Canvas(bmResult); // the other canvas on the bmp was rotated, so we create another.
+				Time now = new Time();
+				now.set(System.currentTimeMillis());
+				tempCanvas2.drawText(
+						PresentationHelper.getWindStrengthString(now.hour + ":" + now.minute + " "
+								+ mostRecentMeasurement.getWindAvg())
+								+ "ms "
+						// +"@"+ mostRecentMeasurement.getStationID()
 						, 0, bmResult.getHeight() - 20, // 20,
 						// used 20 for drawing close to top of button
-						paint);
+						PresentationHelper.getPaint());
 				tempCanvas2.drawText(WindWidgetStations.getStationNameForStationId(widgetStationID), 0, bmResult.getHeight(),
-						paint);
+						PresentationHelper.getPaint());
 
 				views.setBitmap(R.id.imageButton1, "setImageBitmap", bmResult);
 			} else {
-				// for now, just draw a logo if no valid direction
+				// for now, just draw a question mark if no valid direction
 				views.setBitmap(R.id.imageButton1, "setImageBitmap",
-						BitmapFactory.decodeResource(getResources(), R.drawable.icon));
+						BitmapFactory.decodeResource(getResources(), R.drawable.question));
 			}
 		}
-
 		setProcessWidgetClickIntent(views, appWidgetId, "aMessage");
-
 		appWidgetManager.updateAppWidget(appWidgetId, views);
 	}
 

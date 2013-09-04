@@ -5,7 +5,7 @@
     android:background="#00FFFFFF"
     android:gravity="center"
     android:orientation="horizontal"
-    android:padding="2dip"
+    android:padding="1dip"
     android:weightSum="1" >
 
     <ImageButton
@@ -13,7 +13,7 @@
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
         android:layout_weight="1"
-        android:src="@drawable/zero" />
+        android:src="@drawable/question" />
 
     <TextView
         android:id="@+id/header_view"

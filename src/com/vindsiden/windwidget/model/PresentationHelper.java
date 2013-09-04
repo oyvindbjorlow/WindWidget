@@ -1,5 +1,8 @@
 package com.vindsiden.windwidget.model;
 
+import android.graphics.Color;
+import android.graphics.Paint;
+
 import com.vindsiden.windwidget.R;
 
 /*
@@ -39,10 +42,22 @@ public class PresentationHelper {
 		}
 		return ((degreeInt > -180) && (degreeInt < 360*1.5)); // check these limits with cg/Øystein, I suppose. i''ve seen values around 380 and -100.
 	}
+	
+	public static Paint getPaint() {
+		Paint paint = new Paint();
+		paint.setColor(Color.WHITE);
+		paint.setTextSize(20f);
+		paint.setAntiAlias(true);
+		paint.setFakeBoldText(true);
+		//paint.setShadowLayer(6f, 0, 0, Color.BLACK);
+		paint.setStyle(Paint.Style.FILL);
+		paint.setTextAlign(Paint.Align.LEFT);
+		return paint;
+	}
 
 	public static int getWindStrengthDrawable(float windStrength ) {
 		// @formatter:off
-		int arrowPng = R.drawable.zero;		
+		int arrowPng = R.drawable.question;		
 		if (windStrength == Float.NaN) {}		 // keep 0 as the image.
 		if (windStrength > 0) 				{arrowPng = R.drawable.arrow;}				
 		if (windStrength >= 2.5)	 		{arrowPng = R.drawable.arrow2;}		
